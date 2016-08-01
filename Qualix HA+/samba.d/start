@@ -1,0 +1,155 @@
+#!/usr/xpg4/bin/sh
+# Version	2.1q
+# Date		09 Aug 2000
+# Author	Kirill Kartinkin
+
+# Программа для перевода кластерного сервиса, представленного программой
+# Samba, в состояние SERVE.
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# При запуске программы производятся последовательно следующие действия:
+#	Подключаются все необходимые конфигурационные файлы.
+#	Запускаются демоны smbd и nmbd.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	2	Samba не запушена
+#	4	Samba свалилась сразу после старта
+#	100	Программу запустили не так
+#	101	Ошибка подключения вспомогательных файлов
+#
+
+# Переменная TOPDIR задает месторасположение Qualix HA+,
+# например, /etc/opt/QUALha.
+# Переменная SGNAME содержит имя сервисной группы
+# Переменная SVCNAME содержит имя сервиса
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Извлекаем из командной строки имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле /${SGDir}/${SVCNAME}.d/environment содержатся
+# переменные окружения для пакета.
+#	PIDsFile
+#	SGFacility
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY=${SGFacility}
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# Стартуем Samba.
+
+# Проверяем, есть ли файл конфигурации
+if [[ ! -f ${SambaConf} ]]
+then
+        Logger err "Can't find configuration file (${SambaConf})."
+        exit 101
+fi
+
+IfIP=$(awk '$1=="interfaces" { print $3 }' ${SambaConf})
+if [[ ${SGNAME} != ${IfIP} ]]
+then
+	Logger warning "${SGNAME}(Qualix) != ${IfIP}(Samba)."
+fi
+
+# Далее мы будем производить наблюдение по pid'ам процессов,
+# а пока запоминаем уже существующие процессы.
+# Заполняем OldXXXXPIDs
+OldSmbdPIDs=$(ps -u root | awk '$4~"^smbd$" { print $1 }')
+# Удаляем символы '\n' из строки
+OldSmbdPIDs=$(print ${OldSmbdPIDs})
+
+OldNmbdPIDs=$(ps -u root | awk '$4~"^nmbd$" { print $1 }')
+OldNmbdPIDs=$(print ${OldNmbdPIDs})
+
+Logger info "Starting Samba..."
+
+# Запускаем
+${SambaBase}/bin/smbd -D -l${SambaLog} -s${SambaConf}
+if (( $? != 0 ))
+then
+	# Ошибка, демон smbd не запустился
+	Logger err "Smbd daemon not started! Samba not started!"
+	exit 2
+fi
+
+${SambaBase}/bin/nmbd -D -l${SambaLog} -s${SambaConf}
+if (( $? != 0 ))
+then
+	# Ошибка, демон smbd не запустился
+	Logger err "Nmbd daemon not started. Samba not started!"
+	exit 2
+fi
+
+Logger info "Samba started."
+
+################################################################################
+# Строим список pid'ов процессов, в соответствии с которым после и будет
+# проводится мониторинг и останов СУБД.
+
+# Начинаем непосредственно строительство списка MonitorProcessesPIDs
+MonitorProcessesPIDs=$(ps -u root | \
+	awk -v Exclude="${OldSmbdPIDs}" \
+		'$4~"^smbd$" && match (" "Exclude" " , " "$1" ") == 0 \
+			{ print $1 } ')
+
+MonitorProcessesPIDs="${MonitorProcessesPIDs} $(ps -u root | \
+	awk -v Exclude="${OldNmbdPIDs}" \
+		'$4~"^nmbd$" && match (" "Exclude" " , " "$1" ") == 0 \
+			{ print $1 }
+		' )"
+	
+# А есть ли вообще процессы?
+if [[ ${MonitorProcessesPIDs} == " " ]]
+then
+	# Сохраняем список процессов
+	ps -el
+	Logger err "Samba has failed at startup time!"
+	# Выходим с кодом ошибки
+	exit 4
+fi
+
+# Заносим pid'ы в файл
+print ${MonitorProcessesPIDs} >${PIDsFile}
+exit 0

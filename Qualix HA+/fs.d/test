@@ -1,0 +1,137 @@
+#!/usr/xpg4/bin/sh
+# Version	0.0q
+# Date		31 Jan 2002
+# Author	Kirill Kartinkin
+
+# Программа для проверки доступности файловых систем,
+# указанных в файле ${SGNAME}/fs.tab.
+#
+# TODO: Написать комментарии
+#
+# Программа сначала проверяет доступность физического устройства,
+# потом наличие файловой системы,
+# потом возможность создания в ней файла.
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	1	Физический диск недоступен
+#	2	Файловая система не замонтирована
+#	3	Невозможно создать файл
+#	4	Невозможно записать в файл
+#	5	Невозможно прочитать из файла
+#	6	Невозможно удалить файл
+#	101	Ошибка подключения вспомогательных файлов
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Строим расширенное имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# основные настроечные параметры пакета.
+#	SGFacility
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY='${SGFacility}'
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+
+cat ${TOPDIR}/sg/${SGNAME}/fs.tab | grep -v '^[ \t]*#' | grep -v '^$' | \
+	while read BlockDevice RawDevice FS Others
+	do
+		if [[ "${RawDevice}" != "-" ]]
+		then
+			prtvtoc -h ${RawDevice} > /dev/null
+		    if (( $? != 0 ))
+		    then
+	    		Logger err "Device ${RawDevice} for file system ${FS} not accessable."
+				exit 1
+		    fi
+		fi
+
+		if [[ -z $(mount -p | awk -v BD=${BlockDevice} '$1==BD { print $0 }') ]]
+		then
+			Logger err "Filesystem ${FS} is not mounted."
+			exit 2
+		fi
+
+		TestFile=${FS}/${TestFileName}
+		if [[ -f ${TestFile} ]]
+		then
+			Logger warning "Test file ${TestFile} exists. Will not test file creation and file removal."
+		else
+			# Can we create a file?
+			> ${TestFile}
+			if [[ ! -f ${TestFile} ]]
+			then
+				Logger err "Cannot create file ${TestFile}."
+				exit 3
+			fi
+
+			# Can we write to it?
+			cp /etc/passwd ${TestFile}
+			if (( $? != 0 ))
+			then
+				Logger err "Cannot write to file ${TestFile}."
+				exit 4
+			fi
+
+			# Can we read from it?
+			cp ${TestFile} /dev/null
+			if (( $? != 0 ))
+			then
+				Logger err "Cannot read from file ${TestFile}."
+				exit 5
+			fi
+
+			rm -f ${TestFile}
+			if [[ -f ${TestFile} ]]
+			then
+				Logger err "Cannot remove file ${TestFile}."
+				exit 6
+			fi
+		fi
+	done
+
+exit 0

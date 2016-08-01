@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: hb_alert.script,v 1.6 1998/03/06 23:34:49 hle Exp $
+#
+
+conffile=/etc/qhap.conf
+topdir="`grep machine.install_dir ${conffile} | awk -F: '{print $2}' | tr -d ' \011'`"
+
+package="`basename ${topdir}`"
+bindir=${topdir}/bin
+snmp_trap=${bindir}/hb_alert.snmp
+send_snmp_trap="`${bindir}/confq machine.send_snmp_trap 2>/dev/null`"
+
+receiver="root"
+
+src="`uname -n`"
+date="`date '+%b %e, %y %H:%M:%S'`"
+mail="/bin/mailx"
+
+do_TOTAL()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src"
+	echo "  Warning! Total heartbeat network failure detected."
+    ) | ${mail} -s "${package} heartbeat alert" ${receiver}
+}
+
+do_PARTIAL()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src"
+	echo "  Warning! Partial heartbeat network failure detected."
+    ) | ${mail} -s "${package} heartbeat alert" ${receiver}
+}
+
+do_unknown()
+{
+    (
+	echo "{${package}} $date - $src"
+	echo "  ${severity}"
+    ) | ${mail} -s "${package} heartbeat alert" ${receiver}
+}
+
+argv=$*
+severity=$1
+
+case "${severity}" in
+	'TOTAL')
+		do_TOTAL
+		;;
+	'PARTIAL')
+		do_PARTIAL
+		;;
+	*)
+		do_unknown
+		;;
+esac
+
+exit 0

@@ -1,0 +1,76 @@
+#!/usr/xpg4/bin/sh
+# Version	2.3q
+# Date		19 Dec 2001
+# Author	Kirill Kartinkin
+
+# TODO: Написать комментарии
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	101	Ошибка подключения вспомогательных файлов
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Строим расширенное имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# основные настроечные параметры пакета.
+#	SGFacility
+#	MailTo
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY='${SGFacility}'
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	eval File=${File}
+	eval File=${File}
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# 
+
+Logger err "Service ${SVCNAME} has failed."
+
+print "Service ${SVCNAME} in service group ${SGNAME} failed."  | \
+	mailx -s "Qualix HA+ -- ${SGNAME}:${SVCNAME} failed" ${MailTo}
+
+exit 0

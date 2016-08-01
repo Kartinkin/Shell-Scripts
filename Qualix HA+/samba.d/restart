@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: restart.m,v 1.3 1998/01/24 00:13:04 plv Exp $
+#
+#
+
+#
+# This shell script will get run when the number of failed test has
+# passed this service 'service.failed_test_count_threshold'.
+#
+# Should return 0 if the service was restart succesfully; otherwise,
+# return non-zero
+#
+
+# The following environment variables are passed in:
+# TOPDIR: HA+ installation directory. For example: /etc/opt/QUALha
+# SGNAME: Service Group name. For example: 193.92.34.2
+# SVCNAME: Service name. For example: httpd
+topdir=${TOPDIR}
+sgname=${SGNAME}
+svcname=${SVCNAME}
+ 
+# If TOPDIR or SGNAME or SVCNAME is not set, very likely that this
+# script was run manually. If so set svcdir to the current directory.
+if test -z "${topdir}" -o -z "${sgname}" -o -z "${svcname}"
+then
+  svcdir="`pwd`"
+else
+  svcdir=${topdir}/sg/${sgname}/${svcname}.d
+fi
+
+stop=${svcdir}/stop
+start=${svcdir}/start
+
+cd ${svcdir}
+
+# This is an example. However, in most case, doing 'stop' and 'start'
+# is sufficient to 'restart'. User is encouraged to customize.
+echo "Restarting service=${svcname}"
+
+if test -x ${stop}
+then
+  ${stop}
+fi
+
+if test -x ${start}
+then
+  ${start}
+fi

@@ -1,0 +1,11 @@
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: dfstab,v 1.3 1998/01/24 00:14:02 plv Exp $
+#
+#
+
+# Place 'share' commands for file system to be shared. See 'man share' for
+# more information
+#share -F nfs /sds
+share /opt

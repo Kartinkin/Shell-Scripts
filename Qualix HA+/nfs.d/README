@@ -1,0 +1,188 @@
+#
+# Copyright (c) 1996 FullTime Software All Rights Reserved.
+#
+# $Id: README.m,v 1.7 1998/09/04 00:29:18 ching Exp $
+#
+#
+	This directory contains the HA+ NFS Server Service Module.
+
+	To use this service module, add a new service to an existing
+service group. For example:
+	qhap addsvc -g 192.91.182.35 nfs
+
+	That will create a new service directory called
+	/etc/opt/QUALha/192.91.182.35/nfs.d/
+
+	Copy the following files from this directory to
+	/etc/opt/QUALha/192.91.182.35/nfs.d/
+
+	env	- configurable environment variables
+	failed 	- service script for notification when NFS fails.
+	restart	- service script to restart NFS
+	start	- service script to start NFS
+	stop	- service script to stop NFS
+	test	- service script to test NFS
+
+*** IMPORTANT:
+	Edit env. Set environment variables to appropriate values. See
+comments in that file for more information.
+***
+
+	Add an entry for service 'nfs' in /etc/opt/QUALha/etc/machine.conf
+service.name: nfs
+
+	Use 'cui' to reconfigure the service group 192.91.182.35.
+
+	'start': 
+		. shares file systems defined in 
+			/etc/opt/QUALha/192.91.182.35/nfs.d/dfstab
+		. starts 'nfsd' if needed
+		. starts 'mounted' if needed
+
+	'stop': 
+		. unshares file systems defined in 
+			/etc/opt/QUALha/192.91.182.35/nfs.d/dfstab
+
+	'test':
+		. verifies that 'nfsd' responds to RPC request.
+		. verifies that 'mountd' responds to RPC request.
+
+NFS LOCK MIGRATION
+  * Background Information	
+	Starting with Solaris 2.5, 'statd' has addtional flags that can 
+be used to allow NFS lock migration.
+
+	Flag '-a' allows the 'statd' daemon to negotiate its identity
+using a list of aliases. This feature is needed because NFS lock
+recovery requires that the NFS server identity matches that of the
+name store in the NFS client /var/statmon/sm directory. For example,
+	. NFS server has nodename: willy
+	  le0: willy, 193.91.182.10
+	  qe0: nfsA, 193.91.182.11
+	  exported filesystem: /tools
+
+	. NFS client mounts
+	  nfsA:/tools /tools
+
+	on NFS client, the following file is created
+	/var/statmon/sm/nfsA
+
+	However, when NFS server negotiate for lock recovery, without using
+the '-a' flag, the NFS server is known to the NFS client only as 'willy'.
+With '-a nfsA', the NFS server is known to the NFS client also as 'nfsA' which
+match the client lock record in /var/statmon/sm
+
+	Flag '-p' allows the 'statd' daemon to record lock record in
+alternate 'statmon' directory. This feature is needed because, upon starting up,
+'statd' uses the information in 'statmon' directory to notify the clients
+that they need to re-submit their lock claim. Without alternate path
+to 'statmon' directory on a shared disk, the "new" NFS server will not
+have the list of NFS clients which has submitted lock requests 
+to the previous NFS server 
+and therefore
+will no be able to notify thoses NFS clients to re-claim their locks.  
+For example, if 'statd -p /tools' is used, 'statd' will create
+/tools/statmon directory when it starts up and will update /tools/statmon
+with appropriate client lock information.
+
+*** Note: 'statd' does take multiple '-a' and '-p' arguments. For example:
+  'statd -a nfsA -a nfsB -p /tools -p /docs'
+
+  * How to specify additional arguments for 'statd.'
+  If you would like to migrate the NFS locks during a NFS failover, you
+  need to modify file nfs.d/statd.tab to add arguments that will be passed
+  to 'statd'.
+  For example, let's suppose for this particular service,
+  the network interface from which the NFS client is mounting  is 'nfsA' and
+  the alternate statmon directory is "/nfsA". Add the following entry:
+
+# Additional argument for statd
+ -a nfsA -p /nfsA
+
+  After this service is started, if you check the process table,  you
+  will see that 'statd' is now running with the following additional 
+  arguments "-a nfsA -p /nfsA". For example:
+# ps -ef | grep statd  
+    root  7479     1  1 13:24:49 ?        0:00 /usr/lib/nfs/statd -a nfsA -p /nf
+sA
+
+  * Currently known lockd or statd patches:
+    . Solaris 2.5.1: 104166-01
+
+  * Unsupported Tools:
+  On Solaris 2.x, the following command can be used to monitor 'lock'
+  activities:
+  # snoop rpc 100021
+
+  . The following flock.c and its companion flock.sh can be used to
+  simulated NFS lock activities:
+
+=== cut here for flock.c
+/*
+ * Copyright (c) 1996 FullTime Software All Rights Reserved.
+ */
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+int
+main(int argc, char **argv)
+{
+  int fd;
+  char *filename;
+  int i, j;
+  pid_t pid;
+
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s lockfile\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
+  filename = argv[1];
+  fd = open(filename, O_RDWR | O_CREAT, 0600);
+  if (fd < 0) {
+    perror("open():");
+    exit(EXIT_FAILURE);
+  }
+
+  pid = getpid();
+
+  fprintf(stderr, "- [%d] Trying to lock file=%s ...\n", pid, filename);
+  if (lockf(fd, F_LOCK, 0) < 0) {
+    perror("lockf() failed:");
+    exit(EXIT_FAILURE);
+  }
+  fprintf(stderr, "* [%d] Got lock for file=%s.\n", pid, filename);
+
+  for(i = 0; i < 10000; i++) {
+    for(j = 0; j < 10000; j++) {
+    }
+  }
+
+  fprintf(stderr, "- [%d] Trying to un-lock file=%s ...\n", pid, filename);
+  if (lockf(fd, F_ULOCK, 0) < 0) {
+    perror("lockf() failed:");
+    exit(EXIT_FAILURE);
+  }
+  fprintf(stderr, "+ [%d] Unlock file=%s OK.\n", pid, filename);
+
+  exit(EXIT_SUCCESS);
+}
+
+=== cut here for flock.sh
+#!/bin/sh
+#
+# Copyright (c) 1996 FullTime Software All Rights Reserved.
+#
+
+flock=/tmp/flock
+flock_file=/sds/tmp/b
+
+while test 1 -eq 1
+do
+  ${flock} ${flock_file}
+done

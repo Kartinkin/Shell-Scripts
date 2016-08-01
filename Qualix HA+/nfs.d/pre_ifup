@@ -1,0 +1,123 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: pre_ifup.m,v 1.4 1998/01/24 00:14:07 plv Exp $
+#
+#
+
+#
+# This shell script is run while the service group to which this
+# service belongs is transited into SERVE state, after the 
+# filesystems are brought up and before interfaces are brought up.
+#
+
+# The following environment variables are passed in:
+# TOPDIR: HA+ installation directory. For example: /etc/opt/QUALha
+# SGNAME: Service Group name. For example: 193.92.34.2
+# SVCNAME: Service name. For example: httpd
+topdir=${TOPDIR}
+sgname=${SGNAME}
+svcname=${SVCNAME}
+ 
+# If TOPDIR or SGNAME or SVCNAME is not set, it is very likely that this
+# script was run manually. Set svcdir to the current directory.
+if test -z "${topdir}" -o -z "${sgname}" -o -z "${svcname}"
+then
+  svcdir="`pwd`"
+else
+  svcdir=${topdir}/sg/${sgname}/${svcname}.d
+fi
+
+cd ${svcdir}
+bindir=${topdir}/bin
+
+if test -f ./env
+then
+  . ./env
+fi
+
+if test X"${XXX_IN_QLOCK_NFSD}" = "X"
+then
+    argv0=$0
+    argv=$*
+    XXX_IN_QLOCK_NFSD=1
+    export XXX_IN_QLOCK_NFSD
+    if test -f ${bindir}/qlock
+    then
+      ${bindir}/qlock -d -p "$argv0 $argv" -l ${topdir}/etc/nfs.d.lock
+    else
+      $argv0 $argv
+    fi
+    status=$?
+
+    exit ${status}
+else
+  echo "## Pre-ifup service=${svcname}"
+fi
+
+# nfsd
+restart_nfsd=0
+if test "${UDP_PROTOCOL}" -eq 0
+then
+  protocol_options="-p tcp"
+  restart_nfsd=1
+elif test "${TCP_PROTOCOL}" -eq 0
+then
+  protocol_options="-p udp"
+  restart_nfsd=0
+else
+  protocol_options="-a"
+  restart_nfsd=1
+fi
+if test X"${RESTART_NFSD}" != "X"
+then
+  restart_nfsd=${RESTART_NFSD}
+fi
+
+if test "${restart_nfsd}" -eq 1
+then
+  nfsd_options="${protocol_options} ${NFSD_OPTIONS}"
+  echo "## Pre-ifup service=${svcname}: Restarting 'nfsd' ..."
+  ${bindir}/pgrep -p "^${NFSD}" | ${bindir}/qkillall 
+  ${NFSD} ${nfsd_options}
+  echo "## Pre-ifup service=${svcname}: 'nfsd' is restarted."
+fi
+
+restart_statd=1
+if test X"${RESTART_STATD}" != "X"
+then
+  restart_statd=${RESTART_STATD}
+fi
+
+if test "${restart_statd}" -eq 1
+then
+  qstatd=${bindir}/qstatd
+  echo "## Pre-ifup service=${svcname}: Restarting 'statd' ..."
+  ${bindir}/pgrep -p "^${STATD}" | ${bindir}/qkillall 
+  ${qstatd} -p ${STATD} -i ${sgname}
+  echo "## Pre-ifup service=${svcname}: 'statd' is restarted."
+fi
+
+echo "## Pre-ifup service=${svcname}: share NFS filesystem ..."
+tabs="dfstab dfs.tab"
+dfstab=""
+
+for tab in ${tabs}
+do
+  if test -f ${tab}
+  then
+    dfstab=${tab}
+    break
+  fi
+done
+
+if test -z "${dfstab}"
+then
+  echo "Cannot find shared file system information in any of:"
+  echo "${tabs}"
+else
+  sh ${dfstab}
+fi
+
+exit 0

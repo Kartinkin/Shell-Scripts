@@ -1,0 +1,55 @@
+#!/bin/ksh
+
+ResName=$1
+shift
+DS=$1
+
+VCSHOME="${VCS_HOME:-/opt/VRTSvcs}"
+
+. $VCSHOME/bin/ag_i18n_inc.sh
+VCSAG_SET_ENVS $ResName
+
+if [[ -x /usr/sbin/metastat ]]
+then
+	metastat=/usr/sbin/metastat
+elif [[ -x /usr/opt/SUNWmd/sbin/metastat ]]
+then
+	metastat=/usr/opt/SUNWmd/sbin/metastat
+else
+	metastat=metastat
+fi
+
+if [[ -x /usr/sbin/metaset ]]
+then
+	metaset=/usr/sbin/metaset
+elif [[ -x /usr/opt/SUNWmd/sbin/metaset ]]
+then
+	metaset=/usr/opt/SUNWmd/sbin/metaset
+else
+	metaset=metaset
+fi
+
+${metastat} -s ${DS} > /dev/null 2>&1
+if (( $? == 0 ))
+then
+	VCSAG_LOG_MSG "N" "Disk set ${DS} already exists." 1
+	exit 0
+fi
+
+${metaset} -s ${DS} -t 2>&1
+if (( $? == 0 ))
+then
+	VCSAG_LOG_MSG "N" "metaset take ownership succeeded of Disk Set ${DS}" 1
+else
+	VCSAG_LOG_MSG "W" "metaset take ownership of Disk Set ${DS} failed. Trying again with clear flag option" 1
+	${metaset} -s ${DS} -t -f 2>&1
+	if (( $? == 0 ))
+	then
+		VCSAG_LOG_MSG "N" "metaset take ownership (with clear flag) succeeded of Disk Set ${DS}." 1
+	else
+		VCSAG_LOG_MSG "E" "metaset take ownership (with clear flag) of Disk Set ${DS} failed." 1
+	fi
+fi
+
+exit 0
+

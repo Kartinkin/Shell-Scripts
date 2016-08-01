@@ -1,0 +1,12 @@
+#!/bin/ksh
+
+ResName=$1
+shift
+DS=$1
+MD=$2
+
+VCSHOME="${VCS_HOME:-/opt/VRTSvcs}"
+VCSVAR="${VCS_VAR:-/var/VRTSvcs}"
+
+rm -f ${VCSVAR}/lock/$DS.$MD.offlining 2>/dev/null
+

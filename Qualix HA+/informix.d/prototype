@@ -1,0 +1,14 @@
+i pkginfo=pkginfo
+i depend=depend
+i request=request
+d none examples ? ? ?
+d none examples/services ? ? ?
+d none examples/services/informix.d 0755 root bin
+f none examples/services/informix.d/environment 0644 root bin
+f none examples/services/informix.d/start 0755 root bin
+f none examples/services/informix.d/stop 0755 root bin
+f none examples/services/informix.d/test 0755 root bin
+f none examples/services/informix.d/restart 0755 root bin
+f none examples/services/informix.d/failed 0755 root bin
+d none dev ? ? ?
+d none dev/informix 0777 root root

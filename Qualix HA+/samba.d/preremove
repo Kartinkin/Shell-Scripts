@@ -1,0 +1,9 @@
+if [ -f /etc/qhap.conf ]
+then
+	QualixDir=`awk '$1=="machine.install_dir:" { print $2 }' /etc/qhap.conf`
+	rm -rf ${BASEDIR}
+	ln -s ${QualixDir} ${BASEDIR}
+	exit 0
+else
+	exit 1
+fi

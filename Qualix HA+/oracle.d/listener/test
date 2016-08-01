@@ -1,0 +1,124 @@
+#!/usr/xpg4/bin/sh
+# Version	2.1q
+# Date		09 Aug 2000
+# Author	Kirill Kartinkin
+
+# Программа для проверки работоспособности кластерного сервиса,
+# представленного демоном listener СУБД Oracle.
+#
+# Работа программы гарантирована с СУБД версий 7.3.xx.
+# Доподлинно известно, что она не поддерживает Oracle старше версии 7.
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	1	Нет SGA
+#	2	Одного из процессов СУБД Oracle нет
+#	3	Не удается подсоединиться к БД
+#	101	Ошибка подключения вспомогательных файлов
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Строим расширенное имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	'~${OracleUser}/.${SGNAME}.environment' \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/configure \
+	/var/adm/bin/logger.sh
+	
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# основные настроечные параметры пакета.
+#	ShutdownTimeOut
+#	OracleUser
+#	TestStatement
+#	TestString
+#	TestUser
+#	SGFacility
+#	ListenerName
+#
+# В файле ~${OracleUser}/.${SGNAME}.environment содержатся все необходимые
+# администратору СУБД переменные окружения.
+#	ORACLE_HOME
+#	ORACLE_SID
+#	PATH=${ORACLE_HOME}/bin:${PATH}
+#	и прочие
+#
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/configure содержатся
+# переменные окружения для пакета.
+#	DevDir
+#	PIDsFile
+#	MonitorProcess
+#	ConfFile
+#	ListenerCtl
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY='${SGFacility}'
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	eval File=${File}
+	eval File=${File}
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# Проверяем работу демона listener
+
+# Проходим по всем процессам.
+# Их список создан для нас при старте.
+for pid in $(cat ${PIDsFile})
+do
+	# В теле цикла проверяется наличие в системе процесса
+	kill -0 ${pid} >/dev/null 2>&1
+	if (( $? != 0 ))
+	then
+		# Процесса не обнаружено
+		Logger err "Listener (${pid}) for Oracle is not running!"
+		# Сохраняем список процессов
+		ps -fu ${OracleUser}
+		exit 2
+	fi
+done
+
+Out=$(su ${OracleUser} -c "${ListenerCtl} status ${ListenerName} 2>/dev/null")
+if [[ -z $(print ${Out} | grep -i "completed successfully") ]]
+then
+	Logger err "Cannot get status for listener ${ListenerName}."
+	exit 2
+#elif (( $(print ${Out} | awk -v sid=${ORACLE_SID} '$1==sid { print $3 ; exit }') > 0 ))
+#then
+#	exit 0
+fi

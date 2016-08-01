@@ -1,0 +1,197 @@
+#!/usr/xpg4/bin/sh
+# Version	2.3q
+# Date		19 Dec 2001
+# Author	Kirill Kartinkin
+
+# Программа для перевода кластерного сервиса, представленного СУБД Oracle,
+# в состояние SERVE.
+#
+# Работа программы гарантирована с СУБД версий выше 7.3.x.
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# При запуске программы производятся последовательно следующие действия:
+#	Подключаются все необходимые конфигурационные файлы.
+#	Запускается СУБД Oracle.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	1	Ошибка вызова
+#	2	Oracle не запушен
+#	4	Oracle свалился сразу после старта
+#	5	Нет конфигурационных файлов
+#	6	Oracle уже работает и не может быть остановлен
+#	100	Программу запустили не так
+#	101	Ошибка подключения вспомогательных файлов
+#
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+# Переменная TOPDIR задает месторасположение Qualix HA+,
+# например, /etc/opt/QUALha.
+# Переменная SGNAME содержит имя сервисной группы
+# Переменная SVCNAME содержит имя сервиса
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Строим расширенное имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	'~${OracleUser}/.${SVCNAME}.environment' \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/configure \
+	/var/adm/bin/logger.sh
+	
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# основные настроечные параметры пакета.
+#	ShutdownTimeOut
+#	AbortTimeOut
+#	OracleUser
+#	TestStatement
+#	TestString
+#	TestUser
+#	SGFacility
+#
+# В файле ~${OracleUser}/.${SVCNAME}.environment содержатся все необходимые
+# администратору СУБД переменные окружения.
+#	ORACLE_HOME
+#	ORACLE_SID
+#	PATH=${ORACLE_HOME}/bin:${PATH}
+#	и прочие
+#
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/configure содержатся
+# переменные окружения для пакета.
+#	DevDir
+#	PIDsFile
+#	MonitorProcess
+#	ProcessName
+#	PFile
+#	SGA
+#	OracleMgrl
+#	SQLPlus
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY='${SGFacility}'
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	eval File=${File}
+	eval File=${File}
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# Описываем вспомогательные функции
+
+################################################################################
+# Функция выводит сообщение об ошибке
+#
+# Параметры:
+#	код возврата
+#
+# Возвращаемые значения:
+#	нет
+#
+function Exit
+{
+	if (( $1 != 0 ))
+	then
+		Logger err "Oracle NOT started!"
+		exit $1
+	else
+		exit 0
+	fi
+}
+	
+################################################################################
+################################################################################
+# Производим необходимые проверки и, если все правильно, стартуем СУБД.
+
+# Проверяем, есть ли файл конфигурации
+if [[ ! -f ${PFile} ]]
+then
+	Logger err "Can't find init file (${PFile}) for Oracle."
+	Exit 5
+fi
+
+#if [[ -f ${SGAdbf}  || -f ${SGAora} ]]
+#then
+#	# Данный экземпляр Oracle уже работает!
+#	Logger err "Database possibly left running when system went down (system crash?)."
+#	# Сначала остановим СУБД
+#    print "connect internal;\nshutdown abort;\nexit;" | \
+#		su ${OracleUser} -c "${OracleMgrl}"
+#	if (( $? != 0))
+#	then
+#		Exit 6
+#	fi
+#fi
+
+################################################################################
+# Стартуем Oracle
+
+Logger info "Starting Oracle sid ${ORACLE_SID}..."
+# Поскольку мы уже загрузили настройки пользователя ${OracleUser},
+# делаем su без "-"
+print "connect internal;\nstartup nomount pfile=${PFile};\nalter database mount;\nrecover database;\nalter database open;\nexit;" | \
+	su ${OracleUser} -c "${OracleMgrl}"
+if (( $? != 0 ))
+then
+	Exit 2
+else
+	Logger info "Oracle started!"
+fi
+
+sleep 10
+# Строим список MonitorProcessesPIDs
+# В теле цикла заполняем элементы массива pid'ами процессов.
+# Переменная p содержит имя процесса, а i пробегает по элементам массива.
+integer i=0
+for p in ${MonitorProcess[*]}
+do 
+    MonitorProcessesPIDs[$i]=$(ps -fu ${OracleUser} | awk -v Proc=$p \
+		'Proc==$8 { print $2 }' )
+    (( i = i + 1 ))
+done
+
+# А есть ли вообще процессы?
+if [[ -z ${MonitorProcessesPIDs[*]} ]]
+then
+	# Сохраняем список процессов
+	ps -ef
+	Logger err "Oracle has failed at startup time!"
+	# Выходим с кодом ошибки
+	exit 4
+fi
+
+# Заносим pid'ы в файл
+print ${MonitorProcessesPIDs[*]} >${PIDsFile}
+exit 0

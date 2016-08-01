@@ -1,0 +1,107 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: post_ifdown.m,v 1.5 1998/02/19 22:16:51 hle Exp $
+#
+#
+
+share=/usr/sbin/share
+[ -x ${share} ] || share=share
+
+unshare=/usr/sbin/unshare
+[ -x ${unshare} ] || unshare=unshare
+
+#
+# This shell script is run while the service group to which this
+# service belongs is transited into STANDBY state, after the 
+# interfaces are brought down and while the filesystems are still up.
+#
+
+# The following environment variables are passed in:
+# TOPDIR: HA+ installation directory. For example: /etc/opt/QUALha
+# SGNAME: Service Group name. For example: 193.92.34.2
+# SVCNAME: Service name. For example: httpd
+topdir=${TOPDIR}
+sgname=${SGNAME}
+svcname=${SVCNAME}
+ 
+# If TOPDIR or SGNAME or SVCNAME is not set, it is very likely that this
+# script was run manually. Set svcdir to the current directory.
+if test -z "${topdir}" -o -z "${sgname}" -o -z "${svcname}"
+then
+  svcdir="`pwd`"
+else
+  svcdir=${topdir}/sg/${sgname}/${svcname}.d
+fi
+
+cd ${svcdir}
+bindir=${topdir}/bin
+
+if test -f ./env
+then
+  . ./env
+fi
+
+if test X"${XXX_IN_QLOCK_NFSD}" = "X"
+then
+    argv0=$0
+    argv=$*
+    XXX_IN_QLOCK_NFSD=1
+    export XXX_IN_QLOCK_NFSD
+    if test -f ${bindir}/qlock
+    then
+      ${bindir}/qlock -d -p "$argv0 $argv" -l ${topdir}/etc/nfs.d.lock
+    else
+      $argv0 $argv
+    fi
+    status=$?
+
+    exit ${status}
+else
+  echo "## Post-ifdown service=${svcname}"
+fi
+
+echo "## Post-ifdown service=${svcname}. Unshare NFS filesystem."
+
+tabs="dfstab dfs.tab"
+dfstab=""
+
+for tab in ${tabs}
+do
+  if test -f ${tab}
+  then
+    dfstab=${tab}
+    break
+  fi
+done
+
+if test -z "${dfstab}"
+then
+  echo "Cannot find shared file system information in any of:"
+  echo "${tabs}"
+else
+  cat ${dfstab} | egrep '^[^#]' | awk '{print $NF}' | (
+    while read fs junk
+    do
+      unshare ${fs}
+    done
+  )
+fi
+
+restart_statd=1
+if test X"${RESTART_STATD}" != "X"
+then
+  restart_statd=${RESTART_STATD}
+fi
+
+if test "${restart_statd}" -eq 1
+then
+  qstatd=${bindir}/qstatd
+  echo "## Pre-ifup service=${svcname}: Restarting 'statd' ..."
+  ${bindir}/pgrep -p "^${STATD}" | ${bindir}/qkillall
+  ${qstatd} -p ${STATD} -x ${sgname}
+  echo "## Post-ifdown service=${svcname}: 'statd' is restarted."
+fi
+
+exit 0

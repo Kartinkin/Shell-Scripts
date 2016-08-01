@@ -1,0 +1,85 @@
+i pkginfo=pkginfo
+i depend=depend
+i request=request
+
+d none examples ? ? ?
+d none examples/services ? ? ?
+d none dev ? ? ?
+
+!search fs.d
+d none examples/services/jet.fs.d 0755 root bin
+f none examples/services/jet.fs.d/start 0755 root bin
+f none examples/services/jet.fs.d/stop 0755 root bin
+f none examples/services/jet.fs.d/test 0755 root bin
+f none examples/services/jet.fs.d/restart 0755 root bin
+f none examples/services/jet.fs.d/failed 0755 root bin
+f none examples/services/jet.fs.d/environment 0644 root bin
+f none examples/services/jet.fs.d/add_to_machine.conf 0644 root bin
+d none dev/df 0755 root root
+
+!search df.d
+d none examples/services/jet.df.d 0755 root bin
+f none examples/services/jet.df.d/start 0755 root bin
+f none examples/services/jet.df.d/stop 0755 root bin
+f none examples/services/jet.df.d/test 0755 root bin
+f none examples/services/jet.df.d/restart 0755 root bin
+f none examples/services/jet.df.d/failed 0755 root bin
+f none examples/services/jet.df.d/environment 0644 root bin
+f none examples/services/jet.df.d/add_to_machine.conf 0644 root bin
+f none examples/services/jet.df.d/df.tab 0644 root bin
+
+!search samba.d
+d none examples/services/samba.d 0755 root bin
+f none examples/services/samba.d/environment 0644 root bin
+f none examples/services/samba.d/start 0755 root bin
+f none examples/services/samba.d/stop 0755 root bin
+f none examples/services/samba.d/test 0755 root bin
+f none examples/services/samba.d/restart 0755 root bin
+f none examples/services/samba.d/failed 0755 root bin
+d none dev/samba 0777 root root
+
+!search informix.d
+d none examples/services/jet.informix.d 0755 root bin
+f none examples/services/jet.informix.d/environment 0644 root bin
+f none examples/services/jet.informix.d/start 0755 root bin
+f none examples/services/jet.informix.d/stop 0755 root bin
+f none examples/services/jet.informix.d/test 0755 root bin
+f none examples/services/jet.informix.d/restart 0755 root bin
+f none examples/services/jet.informix.d/failed 0755 root bin
+d none dev/informix 0777 root root
+
+!search oracle.d/oracle
+d none examples/services/jet.oracle.d 0755 root bin
+f none examples/services/jet.oracle.d/start 0755 root bin
+f none examples/services/jet.oracle.d/stop 0755 root bin
+f none examples/services/jet.oracle.d/test 0755 root bin
+f none examples/services/jet.oracle.d/restart 0755 root bin
+f none examples/services/jet.oracle.d/failed 0755 root bin
+f none examples/services/jet.oracle.d/environment 0644 root bin
+f none examples/services/jet.oracle.d/configure 0644 root bin
+f none examples/services/jet.oracle.d/add_to_machine.conf 0644 root bin
+d none dev/oracle 0755 root root
+
+!search oracle.d/listener
+d none examples/services/jet.listener.d 0755 root bin
+f none examples/services/jet.listener.d/start 0755 root bin
+f none examples/services/jet.listener.d/stop 0755 root bin
+f none examples/services/jet.listener.d/test 0755 root bin
+f none examples/services/jet.listener.d/restart 0755 root bin
+f none examples/services/jet.listener.d/failed 0755 root bin
+f none examples/services/jet.listener.d/environment 0644 root bin
+f none examples/services/jet.listener.d/configure 0644 root bin
+f none examples/services/jet.listener.d/add_to_machine.conf 0644 root bin
+d none dev/listener 0755 root root
+
+!search sds.d
+d none examples/services/jet.sds.d 0755 root bin
+f none examples/services/jet.sds.d/start 0755 root bin
+f none examples/services/jet.sds.d/stop 0755 root bin
+f none examples/services/jet.sds.d/test 0755 root bin
+f none examples/services/jet.sds.d/restart 0755 root bin
+f none examples/services/jet.sds.d/failed 0755 root bin
+f none examples/services/jet.sds.d/environment 0644 root bin
+f none examples/services/jet.sds.d/add_to_machine.conf 0644 root bin
+d none dev/sds 0755 root root
+

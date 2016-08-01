@@ -1,0 +1,301 @@
+#!/bin/sh 
+## /etc/config/cloneroot1.3 v1.3 2002.10.06 by shr@russia.sun.com
+# Thu Jun 26 14:35:42 MSD 2003
+## add log timing
+##
+##
+## Tested on Solaris 8 & VxVm 3.1 and 3.2
+## Should work on Solaris 2.6, 7, 8 & VxVm 3.0.4, 3.1, 3.1.1, 3.2
+##
+## Takes on-line copy of the running OS to a spare "clone" disk.
+## Data is copied using vxvm mirroring with breaking mirror later
+## Disk later converted to partitions/slices, rather than
+## volumes. This script doing best in saving original layout of the disk.
+##
+## Central assumptions:
+## 1) rootdisk is encapsulated
+## 2) Target disk is initialized and in rootdg
+## 3) No subdisks/volumes are defined on target disk
+## 4) Partitions except 2,3,4 unused on target disk
+##
+## Arguments:
+## $1 - disk name for copy
+##
+## ToDo:
+## make script to automatically recognize unused partitions (with tag != 5, 15, 14)
+
+LOG=/var/log/cloneroot`date +%d_%m_%y`.log
+
+#########################################
+# FUNCTIONS
+#########################################
+arrayitem() { shift $1; echo $1; }
+shiftlist() { shift; echo $@; }
+log() { echo "`date` $@" >>$LOG;}
+
+#########################################
+# PARSE ARGUMENTS
+#########################################
+if [ $# = 1 ];
+then
+	CloneName=$1
+else
+	CloneName=rootclone
+fi
+log "cloneroot started"
+log "cloning to disk: $CloneName"
+
+#########################################
+# PREVALIDATIONS AND INITIALIZATION
+#########################################
+TargetDisk=`/usr/sbin/vxprint -g rootdg -F"%device_tag" ${CloneName}`
+TargetLen=`/usr/sbin/vxprint -g rootdg -F"%len" ${CloneName}`
+
+if [ -z "${TargetDisk}" ] ; then
+	echo "WARNING: No disk found matching the name \"${CloneName}\"."
+	echo "Unable to continue."
+	exit 2
+fi
+
+Volumes=`/usr/sbin/vxprint -Q -g rootdg -e"pl_sd.sd_dm_name == \"${CloneName}\"" -F"%vol"`
+if [ -n "${Volumes}" ] ; then
+	echo "WARNING: Volumes found on \"${CloneName}\" disk."
+	echo "Unable to continue."
+	exit 2
+fi
+
+GuardSdSuff="guard"
+GuardSdPutil0="DONOTUSE"
+
+GuardLen=`/usr/sbin/vxprint -g rootdg -F"%len" ${CloneName}-${GuardSdSuff} 2> /dev/null`
+GuardPutil0=`/usr/sbin/vxprint -g rootdg -F"%putil0" ${CloneName}-${GuardSdSuff} 2> /dev/null`
+if [ "${GuardLen}" -eq "${TargetLen}" -a "${GuardPutil0}" = "${GuardSdPutil0}" ] ; then
+	/usr/sbin/vxedit rm ${CloneName}-${GuardSdSuff}
+fi
+
+## Create dedicated directory for temp purposes
+## /tmp is not good dir for sec reasons
+_TEMPDIR=/var/adm/config/${CloneName}
+if [ ! -d ${_TEMPDIR} ]; then
+	mkdir -p ${_TEMPDIR}
+fi
+
+RootVol=rootvol
+SatelliteVols="usr var opt swapvol"
+ExistingVols=""
+iosize=256k
+
+for vol in ${RootVol} ${SatelliteVols};
+do
+	/usr/sbin/vxprint -g rootdg ${vol} > /dev/null 2>&1 && ExistingVols="${ExistingVols} ${vol}"
+done
+
+#########################################
+# SANITY CHECK
+#########################################
+if [ `arrayitem 1 ${ExistingVols}` != "rootvol" ];
+then
+	echo "WARNING: ${RootVol} not found in rootdg."
+	echo "Unable to continue."
+	exit 2
+fi
+
+#########################################
+# MIRROR ROOTDISK TO CLONE
+#########################################
+for vol in ${ExistingVols};
+do
+	log "begin attaching mirror for $vol"
+	/usr/sbin/vxassist -g rootdg -o iosize=${iosize} mirror ${vol} layout=contig,diskalign ${CloneName}
+done
+log "all mirrors done"
+
+#########################################
+# BREAK THE MIRROR
+#########################################
+for vol in ${ExistingVols};
+do
+	log "begin detaching mirror for $vol"
+	plex=`/usr/sbin/vxprint -Q -g rootdg -e"pl_volume == \"${vol}\" && pl_sd.sd_dm_name == \"${CloneName}\"" -F"%plex"`
+	/usr/sbin/vxplex -g rootdg det ${plex}	
+done
+log "all mirrors detached"
+
+# vxmksdpart -g rootdg $din-$sdn $slice $tag $flag
+#     tag              The partition tag:  a two-digit hex number.
+#                      The  following  are  reserved  codes:  0x00
+#                      (V_UNASSIGNED),   0x01    (V_BOOT),    0x02
+#                      (V_ROOT), 0x03 (V_SWAP), 0x04 (V_USR), 0x05
+#                      (V_BACKUP), 0x06  (V_STAND),  0x07  (V_VAR)
+#                      and 0x08 (V_HOME).
+#
+#     flag             The flag allows a partition to  be  flagged
+#                      as  unmountable  or  read  only,  the masks
+#                      being:  V_UNMNT  0x01,  and  V_RONLY  0x10.
+#                      For mountable partitions use 0x00.
+
+#########################################
+# CLEANUP UNUSED SLICES
+#########################################
+# slices 2 is a whole disk
+# slices 3 and 4 used by VxVm
+rootslice=0
+partitions="${rootslice} 1 5 6 7"
+
+for slice in ${partitions};
+do
+format ${TargetDisk} > /dev/null << EOFORMAT
+partition
+${slice}
+unassigned
+wm
+0
+0
+label
+y
+EOFORMAT
+done
+
+#########################################
+# CREATE PARTITIONS & BUILD VFSTAB
+#########################################
+ROOTMOUNT=${_TEMPDIR}/root
+MNTPOINT=`mount -p | nawk \
+	'$1 == "/dev/dsk/'${TargetDisk}s${rootslice}'" {print $3}'`
+if [ -n "${MNTPOINT}" ]; then
+	umount ${MNTPOINT}
+fi
+if [ ! -d ${ROOTMOUNT} ]; then
+	mkdir ${ROOTMOUNT}
+fi
+
+sdnum=1
+
+for vol in ${ExistingVols};
+do
+	slice=`arrayitem 1 ${partitions}`
+	partitions=`shiftlist ${partitions}`
+	B_dev=/dev/dsk/${TargetDisk}s${slice}
+	C_dev=/dev/rdsk/${TargetDisk}s${slice}
+	flag=0x00
+	fstype=ufs
+	options="-"
+	
+	case ${vol} in
+	rootvol)
+		tag=0x02
+		mntpoint="/"
+		fsckorder="1"
+		mntboot=no
+	;;
+	usr)
+		tag=0x04
+		mntpoint="/usr"
+		fsckorder="2"
+		mntboot=no
+	;;
+	var)
+		tag=0x07
+		mntpoint="/var"
+		fsckorder="3"
+		mntboot=no
+	;;
+	opt)
+		tag=0x00
+		mntpoint="/opt"
+		fsckorder="4"
+		mntboot=yes
+	;;
+	home)
+		tag=0x08
+		mntpoint="/export/home"
+		fsckorder="5"
+		mntboot=yes
+	;;
+	swapvol)
+		tag=0x03
+		flag=0x01
+		C_dev="-"
+		mntpoint="-"
+		fstype=swap
+		fsckorder="-"
+		mntboot=no
+	;;
+	*)
+		tag=0x00
+		mount -p | awk "/\/dev\/vx\/dsk\/rootdg\/${vol}/ "'{ print $0; }' | read Bdev Cdev MP FStype Order AtBoot Options;
+		B_dev=/dev/dsk/${TargetDisk}s${slice}
+		C_dev=/dev/rdsk/${TargetDisk}s${slice}
+		mntpoint=${MP}
+		fstype=${FStype}
+		fsckorder="9"
+		mntboot=${AtBoot}
+		options=${Options}
+	;;
+	esac
+	
+	/etc/vx/bin/vxmksdpart -g rootdg ${CloneName}-0${sdnum} ${slice} ${tag} ${flag}
+
+	if [ "${vol}" = "${RootVol}" ]; then
+		fsck -y /dev/dsk/${TargetDisk}s${rootslice}
+		mount /dev/dsk/${TargetDisk}s${rootslice} ${ROOTMOUNT}
+		mv ${ROOTMOUNT}/etc/vfstab ${ROOTMOUNT}/etc/vfstab.pre_clone
+		
+cat >> ${ROOTMOUNT}/etc/vfstab <<EOVFSTAB
+fd	-	/dev/fd	fd	-	no	-
+/proc	-	/proc	proc	-	no	-
+swap	-	/tmp	tmpfs	-	yes	-
+EOVFSTAB
+
+	fi
+	if [ "${vol}" = "swapvol" ]; then
+		dumpadm -d /dev/dsk/${TargetDisk}s${slice}
+	fi
+		
+cat >> ${ROOTMOUNT}/etc/vfstab <<EOVFSTAB
+${B_dev}	${C_dev} 	${mntpoint}	${fstype}	${fsckorder}	${mntboot}	${options}
+EOVFSTAB
+	
+	sdnum=`expr ${sdnum} + 1`
+	if [ "${sdnum}" -gt 5 ]; then break; fi
+done
+
+#########################################
+# SETUP BOOTBLOCK
+#########################################
+/usr/sbin/installboot \
+	/usr/platform/`uname -i`/lib/fs/ufs/bootblk \
+	/dev/rdsk/${TargetDisk}s${rootslice}
+
+#########################################
+# PATCH /etc/system
+#########################################
+mv ${ROOTMOUNT}/etc/system \
+	${ROOTMOUNT}/etc/system.pre_clone
+sed -e 's/^\(.*vol_rootdev_is_volume.*\)$/* COMMENTED * \1/' -e 's/^\(.*rootdev:.*\)$/* COMMENTED * \1/' \
+	${ROOTMOUNT}/etc/system.pre_clone > \
+	${ROOTMOUNT}/etc/system
+
+#########################################
+# REMOVE ROOTCLONE PLEXES & CREATE GUARD SD
+#########################################
+for vol in ${ExistingVols};
+do
+	plex=`/usr/sbin/vxprint -Q -g rootdg -e"pl_volume == \"${vol}\" && pl_sd.sd_dm_name == \"${CloneName}\"" -F"%plex"`
+	/usr/sbin/vxplex -g rootdg -o rm dis ${plex}
+done
+/usr/sbin/vxmake -g rootdg sd ${CloneName}-${GuardSdSuff} disk=${CloneName} len=${TargetLen} putil0=${GuardSdPutil0}
+
+#########################################
+# FORCE VXVM TO STORE CC&LOG ON EVERY DISK
+#########################################
+vxedit -g rootdg set nconfig=all nlog=all rootdg
+
+#########################################
+# CLEANUP AND EXIT
+#########################################
+rm -f ${ROOTMOUNT}/etc/vx/.dumpadm
+cd /
+umount ${ROOTMOUNT}
+log "cloneroot done"
+exit 0

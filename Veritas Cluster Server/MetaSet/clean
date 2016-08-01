@@ -1,0 +1,55 @@
+#!/bin/ksh
+
+ResName=$1
+shift
+CleanReason=$1
+DS=$2
+
+VCSHOME="${VCS_HOME:-/opt/VRTSvcs}"
+
+. $VCSHOME/bin/ag_i18n_inc.sh
+VCSAG_SET_ENVS $ResName
+
+if [[ -x /usr/sbin/metastat ]]
+then
+	metastat=/usr/sbin/metastat
+elif [[ -x /usr/opt/SUNWmd/sbin/metastat ]]
+then
+	metastat=/usr/opt/SUNWmd/sbin/metastat
+else
+	metastat=metastat
+fi
+
+if [[ -x /usr/sbin/metaset ]]
+then
+	metaset=/usr/sbin/metaset
+elif [[ -x /usr/opt/SUNWmd/sbin/metaset ]]
+then
+	metaset=/usr/opt/SUNWmd/sbin/metaset
+else
+	metaset=metaset
+fi
+
+${metastat} -s ${DS} > /dev/null 2>&1
+if (( $? != 0 ))
+then
+	VCSAG_LOG_MSG "N" "Disk set ${DS} does not exist." 1
+	exit 0
+fi
+
+case ${CleanReason} in
+	[0123]*) # offline timeout / ineffective
+		# online timeout / ineffective
+		${metaset} -s ${DS} -r
+		if (( $? == 0	))
+		then
+			VCSAG_LOG_MSG "N" "metaset release succeeded of Disk Set ${DS}" 1
+			exit 0
+		else
+			VCSAG_LOG_MSG "E" "** metaset realese failed of Disk Set ${DS}" 1
+			exit 1
+		fi
+		;;
+	[45]*) ;;
+esac
+

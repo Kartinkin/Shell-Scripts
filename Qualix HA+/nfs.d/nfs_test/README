@@ -1,0 +1,74 @@
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: README,v 1.3 1998/01/24 00:14:16 plv Exp $
+#
+#
+This is an sample implementation of an NFS test program
+(written in C). It is intended to be used as an starting
+point for advance users who would like to test 'nfsd' in details.
+
+*** Guide to Users:
+Usage: ./nfs_test [-v 2 | 3] [-d] hostname file_system
+        -v: NFS version (2 or 3). Default is 2.
+        -d: turn on debug flag. Default is 0.
+        hostname: name of the NFS server. Suggest: localhost.
+        file_system: NFS file system to be tested.
+For example: ./nfs_test localhost /
+
+	All you need to do to use 'nfs_test' is to set 
+variable ENHANCED_NFS_TEST in .env (in the service directory)
+to 1.
+
+*** Guide to Programmers:
+NOTE: We will do our best to help you modifying this program to
+fit your needs. But be forewarned that we consider any
+modified versions of this program by non-Qualix employees as
+unsupported.
+
+You should have some working knowledges of XDR and RPC. Here are
+the references:
+	. RFC 1014, XDR: External Data Representation Standard 
+	. RFC 1057, RPC: Remote Procedure Call Protocol Specification
+	. RFC 1094, Network Filesystem Specification
+	. RFC 1813, NFS Version 3 Protocol Specification
+
+	Directory layout:
+
+	Makefile	Makefile for this directory
+	README		This file
+	main.c		The main program. This should be the
+			only file needed editing.
+	mount.h		Header file for the mount program
+	mount.x		Protocol description for the mount program
+	mount_clnt.c	RPC procedures for the mount program
+	mount_xdr.c	XDR description for the mount program
+	nfs_prot3.h	Header file for the nfs program
+	nfs_prot3.x	Protocol description for the nfs program
+	nfs_prot3_clnt.c RPC procedures for the nfs program	
+	nfs_prot3_xdr.c	XDR description for the nfs program
+
+NFS version 2:
+	All server procedures are defined and ready to be used.
+
+NFS version 3:
+	Only NFSPROC3_NULL() and NFSPROC3_GETATTR() are 
+	defined. To add additional procedures
+	  . Modify nfs_prot3.x and run 'rpcgen nfs_prot3.x'
+	    to generate the *.h and *.c files.
+	  . Run 'make' to re-create nfs_test
+
+To add additional tests:
+	. Modify nfs_test2() or/and nfs_test3(). Each function is
+	layouted as followed:
+
+	1. Create a mountd CLIENT object
+	2. Check to see if 'mountd' is answering
+	3. Get a file handle
+	4. Destroy the mountd CLIENT object.
+
+	5. Create a nfsd CLIENT object
+	6. Check to see if 'nfsd' is answering
+	7. Get attribute of the file handle obtained on step 3.
+	... additional test can be performed here ...
+	... for example, read the directory ...

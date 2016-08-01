@@ -1,0 +1,20 @@
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: sds.ds.tab,v 1.3 1998/01/24 00:12:57 plv Exp $
+#
+#
+
+# Soltice Disk Suite's disk sets table
+#
+# This table describes the SDS disk sets that will need 
+# to be started and stopped for a service group.
+#
+# Each line is an entry.
+# There is only one field for each entry.
+#   diskset_name: a SDS disk set name
+
+#diskset_name
+#sds
+#group1
+#group2

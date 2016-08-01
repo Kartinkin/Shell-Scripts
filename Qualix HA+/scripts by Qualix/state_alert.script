@@ -1,0 +1,179 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: state_alert.script.m,v 1.4 1998/03/25 19:32:07 hle Exp $
+#
+
+conffile=/etc/qhap.conf
+topdir="`grep machine.install_dir ${conffile} | awk -F: '{print $2}' | tr -d ' \011'`"
+
+package="`basename ${topdir}`"
+bindir=${topdir}/bin
+snmp_trap=${bindir}/state_alert.snmp
+send_snmp_trap="`${bindir}/confq machine.send_snmp_trap 2>/dev/null`"
+
+receiver="root"
+
+src="`uname -n`"
+date="`date '+%b %e, %y %H:%M:%S'`"
+mail="/bin/mailx"
+
+console=/var/adm/messages
+
+
+
+
+compose_verbose_mail_message()
+{
+  echo "{${package}} $date - $src - group ${group_ip}"
+  echo " ${state_class_name} local state changed from ${old_state} to ${new_state}" 
+  echo " best server: ${server} - best standby: ${standby}"
+  echo " offline's: ${noffline} - standby's: ${nstandby}"
+}
+
+compose_mail_message()
+{
+  echo "{${package}} $date - $src - group ${group_ip} - ${state_class_name}"
+  echo " ${new_state}, srv=${server}, bstby=${standby}, noff=${noffline}, nstby=${nstandby}"
+}
+
+do_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+  #compose_mail_message | ${mail} -s "${package} state alert" ${receiver}
+  compose_verbose_mail_message | ${mail} -s "${package} state alert" ${receiver}
+
+  #compose_mail_message >> ${console}
+  compose_verbose_mail_message >> ${console}
+}
+
+do_sm_class()
+{
+  case "${new_state}" in
+	'SM_OFFLINE')
+		do_notification 
+		;;
+	'SM_OFFLINE_FAILED_TO_START')
+		do_notification 
+		;;
+	'SM_STANDBY')
+		#do_notification
+		;;
+	'SM_STARTING')
+		#do_notification
+		;;
+	'SM_RUNNING')
+		do_notification
+		;;
+	'SM_STOPPING')
+		#do_notification
+		;;
+	'SM_RUNNING_FAILED_TO_START')
+		do_notification
+		;;
+	'SM_RUNNING_FAILED_TO_STOP')
+		do_notification
+		;;
+	'SM_OFFLINE_FAILED_SVC')
+		do_notification
+		;;
+  esac
+}
+
+do_rolem_class()
+{
+  case "${new_state}" in
+	'HBM_NOMINATE')
+		#do_notification
+		;;
+	'HBM_ELECT')
+		#do_notification
+		;;
+	'HBM_ATTEMPT_SERVICE')
+		#do_notification
+		;;
+	'HBM_SERVE')
+		do_notification
+		;;
+	'HBM_STANDBY')
+		#do_notification
+		;;
+	'HBM_OFFLINE')
+		do_notification
+		;;
+  esac
+}
+
+do_sg_class()
+{
+  case "${new_state}" in
+	'SG_SERVED')
+		do_notification
+		;;
+	'SG_SERVER_HUNG')
+		do_notification
+		;;
+	'SG_SERVER_STARTING')
+		do_notification
+		;;
+	'SG_SERVER_STOPPING')
+		do_notification
+		;;
+	'SG_ELECTION')
+		do_notification
+		;;
+	'SG_PRE_ELECTION')
+		do_notification
+		;;
+ 	'SG_OFFLINE')
+		do_notification
+		;;
+  esac
+}
+
+do_unknown_class()
+{
+  do_notification
+}
+
+argv=$*
+
+state_class_name=$1
+old_state=$2
+sm_state=$3
+rolem_state=$4
+sg_state=$5
+group_name=$6
+group_ip=$7
+nstandby=$8
+noffline=$9
+shift 9
+server=$1
+standby=$2
+
+case "${state_class_name}" in
+	'SM')
+	 	new_state=${sm_state}
+		do_sm_class
+		;;
+	'ROLEM')
+	 	new_state=${rolem_state}
+		do_rolem_class
+		;;
+	'SG')
+	 	new_state=${sg_state}
+		do_sg_class		
+		;;
+	*)
+		new_state="NONE"
+		do_unknown_class
+		;;
+esac
+
+exit 0

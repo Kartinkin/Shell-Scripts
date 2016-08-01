@@ -1,0 +1,58 @@
+#!/bin/ksh
+
+ResName=$1
+shift
+DS=$1
+MD=$2
+
+VCSHOME="${VCS_HOME:-/opt/VRTSvcs}"
+VCSVAR="${VCS_VAR:-/var/VRTSvcs}"
+
+. $VCSHOME/bin/ag_i18n_inc.sh
+VCSAG_SET_ENVS $ResName
+
+if [[ -x /usr/sbin/metastat ]]
+then
+	metastat=/usr/sbin/metastat
+elif [[ -x /usr/opt/SUNWmd/sbin/metastat ]]
+then
+	metastat=/usr/opt/SUNWmd/sbin/metastat
+else
+	metastat=metastat
+fi
+
+if [[ -x /usr/sbin/metaset ]]
+then
+	metaset=/usr/sbin/metaset
+elif [[ -x /usr/opt/SUNWmd/sbin/metaset ]]
+then
+	metaset=/usr/opt/SUNWmd/sbin/metaset
+else
+	metaset=metaset
+fi
+
+if [[ -f ${VCSVAR}/lock/$DS.$MD.offlining ]]
+then
+	exit 100
+fi
+
+${metastat} -s ${DS} > /dev/null 2>&1
+if (( $? != 0 ))
+then
+	exit 100
+fi
+
+Ret=110
+
+${metastat} -s ${DS} ${MD} | nawk -v DS=${DS} -v MD="" '
+		$1~"^"DS"/" { MD=$1 ; break }
+		$0~"ainten" { print MD ; MD="" }' | \
+while read MD
+do
+	i=${MD%:}
+	VCSAG_LOG_MSG "N" "Metadevice ${DS}/$i needs maintenance" 1
+	metastat -s ${DS} ${i#*/}
+	Ret=100
+done
+
+exit ${Ret}

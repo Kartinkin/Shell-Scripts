@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: env.m,v 1.10 1998/09/04 00:29:19 ching Exp $
+#
+#
+
+# UDP_PROTOCOL: Set UDP_PROTOCOL to 1 for 'nfsd' to handle UDP connections
+UDP_PROTOCOL=1
+export UDP_PROTOCOL
+
+# TCP_PROTOCOL: Set TCP_PROTOCOL to 1 for 'nfsd' to handle TCP connections
+TCP_PROTOCOL=1
+export TCP_PROTOCOL
+
+if test -z "${UDP_PROTOCOL}" -o "${UDP_PROTOCOL}" -eq 0
+then
+  UDP_PROTOCOL=0
+else
+  UDP_PROTOCOL=1
+fi
+
+if test -z "${TCP_PROTOCOL}" -o "${TCP_PROTOCOL}" -eq 0
+then
+  TCP_PROTOCOL=0
+else
+  TCP_PROTOCOL=1
+fi
+
+# check to see if this makes sense
+if [ ${UDP_PROTOCOL} -eq 0 -a ${TCP_PROTOCOL} -eq 0 ]
+then
+  echo "nfs.d configured with no protocols:"
+  echo "UDP_PROTOCOL='${UDP_PROTOCOL}'"
+  echo "TCP_PROTOCOL='${TCP_PROTOCOL}'"
+  echo "Activating both protocols"
+  UDP_PROTOCOL=1
+  TCP_PROTOCOL=1
+fi
+
+# USE_RPCINFO. Whether or not to use 'rpcinfo' to query nfsd and mountd.
+# We have gotten report from the field that on heavy-loaded NFS server,
+# rpcinfo will hang. Please note that 'rpcinfo' is a Solaris's program 
+# NOT a HA+ program. If USE_RPCINFO is set to 0, we will use 'pgrep'
+# to verify that that nfsd and mountd is in the process table.
+USE_RPCINFO=0
+export USE_RPCINFO
+
+# NFSD_OPTIONS: Additional 'nfsd' options.
+NFSD_OPTIONS="16"
+export NFSD_OPTIONS
+
+# NFSD: Location of 'nfsd'
+NFSD=/usr/lib/nfs/nfsd
+export NFSD
+
+# NFS_SERVER: the name of the server providing NFS
+# Default to the the nodename. You might want to put in the
+# hostname or IP number from which the NFS client is actually mounting
+# from. In most cases, that will be the hostname or IP number managed
+# by this service group.
+NFS_SERVER="`uname -n`"
+export NFS_SERVER
+
+# LOCKD: Location of 'lockd'
+LOCKD=/usr/lib/nfs/lockd
+export LOCKD
+
+# STATD: Location of 'statd'
+STATD=/usr/lib/nfs/statd
+export STATD
+
+# MOUNTD: Location of 'mountd'
+MOUNTD=/usr/lib/nfs/mountd
+export MOUNTD
+
+# RESTART_NFSD
+#RESTART_NFSD=0
+#export RESTART_NFSD
+
+# RESTART_STATD
+#RESTART_STATD=0
+#export RESTART_STATD
+
+# ENHANCED_NFS_TEST: nfs_test/nfs_test performes additional tests.
+#  If you wish to run them (you can also modify nfs_test/main.c)
+#  then set ENHANCED_NFS_TEST 1.
+ENHANCED_NFS_TEST=0
+export ENHANCED_NFS_TEST

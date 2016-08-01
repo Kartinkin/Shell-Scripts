@@ -1,0 +1,20 @@
+# Service Name: nfs. Created on Mon Oct 18 16:00:45 MSD 1999
+# After creating a new Service Directory, you must perform the following
+#  additional steps to make it 'active'.
+#  1. Add an entry for the new service in /opt/QUALha/etc/machine.conf.
+#     The new service parameters should go after the section that defines
+#     service group 192.168.10.90.
+#     A sample is available in file /opt/QUALha/sg/192.168.10.90/nfs.d/add_to_machine.conf.
+#
+service.name: nfs
+#  2. In service directory /opt/QUALha/sg/192.168.10.90/nfs.d:
+#    Modify or replace files: 'start', 'stop', 'test' so that
+#    they will do appropriate action for the new service.
+#    By default, 'restart' simple run 'stop' then 'start'.
+#    Modify 'restart', if necessary.
+#    If you would like to be notified when the new service
+#    has failed, modify file 'failed'.
+#  3. After making changes to 'machine.conf', you should use 
+#    HA+ cui (run 'qhap cui') to 'reconfigure' which will
+#    force HA+ to re-read the 'machine.conf' file.
+#

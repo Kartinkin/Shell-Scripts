@@ -1,0 +1,7 @@
+# mount_point: mount directory
+# warrning limit
+# error limit
+#
+# mount_point	warning	error
+/usr		80	90
+/		80	90

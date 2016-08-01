@@ -1,0 +1,27 @@
+i pkginfo=pkginfo
+i depend=depend
+i request=request
+d none examples ? ? ?
+d none examples/services ? ? ?
+!search oracle
+d none examples/services/jet.oracle.d 0755 root bin
+f none examples/services/jet.oracle.d/start 0755 root bin
+f none examples/services/jet.oracle.d/stop 0755 root bin
+f none examples/services/jet.oracle.d/test 0755 root bin
+f none examples/services/jet.oracle.d/restart 0755 root bin
+f none examples/services/jet.oracle.d/failed 0755 root bin
+f none examples/services/jet.oracle.d/environment 0644 root bin
+f none examples/services/jet.oracle.d/configure 0644 root bin
+f none examples/services/jet.oracle.d/add_to_machine.conf 0644 root bin
+!search listener
+d none examples/services/jet.listener.d 0755 root bin
+f none examples/services/jet.listener.d/start 0755 root bin
+f none examples/services/jet.listener.d/stop 0755 root bin
+f none examples/services/jet.listener.d/test 0755 root bin
+f none examples/services/jet.listener.d/restart 0755 root bin
+f none examples/services/jet.listener.d/failed 0755 root bin
+f none examples/services/jet.listener.d/environment 0644 root bin
+f none examples/services/jet.listener.d/configure 0644 root bin
+f none examples/services/jet.listener.d/add_to_machine.conf 0644 root bin
+d none dev/oracle 0755 root root
+d none dev/listener 0755 root root

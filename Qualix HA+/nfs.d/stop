@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: stop.m,v 1.6 1998/01/24 00:14:12 plv Exp $
+#
+#
+
+#
+# This shell script will get run when the service group to which this
+# service belongs has transited from SERVE state into STANDBY or OFFLINE state.
+#
+# Should return 0 if the service was start succesfully; otherwise,
+# return non-zero
+#
+
+# The following environment variables are passed in:
+# TOPDIR: HA+ installation directory. For example: /etc/opt/QUALha
+# SGNAME: Service Group name. For example: 193.92.34.2
+# SVCNAME: Service name. For example: httpd
+topdir=${TOPDIR}
+sgname=${SGNAME}
+svcname=${SVCNAME}
+ 
+# If TOPDIR or SGNAME or SVCNAME is not set, very likely that this
+# script was run manually. If so set svcdir to the current directory.
+if test -z "${topdir}" -o -z "${sgname}" -o -z "${svcname}"
+then
+  svcdir="`pwd`"
+else
+  svcdir=${topdir}/sg/${sgname}/${svcname}.d
+fi
+
+cd ${svcdir}
+
+killproc() {            # kill the named process(es)
+        pid=`/usr/bin/ps -e |
+             /usr/bin/grep -w $1 |
+             /usr/bin/sed -e 's/^  *//' -e 's/ .*//'`
+        [ "$pid" != "" ] && kill $pid
+}
+
+if test -f ./env
+then
+  . ./env
+fi
+
+# If the service is already down, then there is no reason
+# to try to stop it.
+#test=${svcdir}/test
+#if test -f ${test}
+#then
+#  ${test}
+#  if test "$?" -ne 0
+#  then
+#    exit 0
+#  fi
+#fi
+
+echo "Stopping service=${svcname}"
+
+exit 0

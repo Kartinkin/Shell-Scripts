@@ -1,0 +1,10 @@
+type MetaSet (
+	str MetaSet
+	static str ArgList[] = { MetaSet }
+)
+
+type MetaDisk (
+	str MetaSet
+	str MetaDisk
+	static str ArgList[] = { MetaSet, MetaDisk }
+)

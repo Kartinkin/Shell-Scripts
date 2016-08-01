@@ -1,0 +1,195 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: manager_alert.script,v 1.6 1998/03/06 23:34:51 hle Exp $
+#
+
+conffile=/etc/qhap.conf
+topdir="`grep machine.install_dir ${conffile} | awk -F: '{print $2}' | tr -d ' \011'`"
+
+package="`basename ${topdir}`"
+bindir=${topdir}/bin
+snmp_trap=${bindir}/manager_alert.snmp
+send_snmp_trap="`${bindir}/confq machine.send_snmp_trap 2>/dev/null`"
+
+receiver="root"
+
+src="`uname -n`"
+date="`date '+%b %e, %y %H:%M:%S'`"
+mail="/bin/mailx"
+
+do_sm_SELF_START_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Service Manager is starting, pid=${pid}"
+    ) | ${mail} -s "${package} Service Manager alert" ${receiver}
+}
+
+do_sm_RESTART_ROLEM_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Service Manager is starting Role Manager, pid=${pid}"
+    ) | ${mail} -s "${package} Service Manager alert" ${receiver}
+}
+
+do_sm_SELF_STOP_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Service Manager is stopping, pid=${pid}"
+    ) | ${mail} -s "${package} Service Manager alert" ${receiver}
+}
+
+do_sm_STOP_ROLEM_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Service Manager is stopping Role Manager, pid=${pid}"
+    ) | ${mail} -s "${package} Service Manager alert" ${receiver}
+}
+
+do_rolem_SELF_START_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Role Manager is starting, pid=${pid}"
+    ) | ${mail} -s "${package} Role Manager alert" ${receiver}
+}
+
+do_rolem_RESTART_SM_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Role Manager is starting Service Manager, pid=${pid}"
+    ) | ${mail} -s "${package} Rolem Manager alert" ${receiver}
+}
+
+do_rolem_SELF_STOP_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Role Manager is stopping, pid=${pid}"
+    ) | ${mail} -s "${package} Role Manager alert" ${receiver}
+}
+
+do_rolem_STOP_SM_notification()
+{
+    if test ! -z "${send_snmp_trap}" -a "${send_snmp_trap}" -eq 1
+    then
+      ${snmp_trap} ${argv}
+      return $?
+    fi
+
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  Role Manager is stopping Service Manager, pid=${pid}"
+    ) | ${mail} -s "${package} Role Manager alert" ${receiver}
+}
+
+do_sm()
+{
+  case "${action_name}" in
+	'SELF_START')
+		do_sm_SELF_START_notification 
+		;;
+	'RESTART_ROLEM')
+		do_sm_RESTART_ROLEM_notification 
+		;;
+	'SELF_STOP')
+		do_sm_SELF_STOP_notification
+		;;
+	'STOP_ROLEM')
+		do_sm_STOP_ROLEM_notification
+		;;
+  esac
+}
+
+do_rolem()
+{
+  case "${action_name}" in
+	'SELF_START')
+		do_rolem_SELF_START_notification
+		;;
+	'RESTART_SM')
+		do_rolem_RESTART_SM_notification
+		;;
+	'SELF_STOP')
+		do_rolem_SELF_STOP_notification
+		;;
+	'STOP_SM')
+		do_rolem_STOP_SM_notification
+		;;
+  esac
+}
+
+do_unknown()
+{
+    (
+	echo "{${package}} $date - $src - from ${manager_name}"
+	echo "  ${manager_name} ${action_name} ${pid}"
+    ) | ${mail} -s "${package} manager alert" ${receiver}
+}
+
+argv=$*
+manager_name=$1
+action_name=$2
+pid=$3
+
+case "${manager_name}" in
+	'SM')
+		do_sm
+		;;
+	'ROLEM')
+		do_rolem
+		;;
+	*)
+		do_unknown
+		;;
+esac
+
+exit 0

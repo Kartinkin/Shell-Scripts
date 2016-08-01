@@ -1,0 +1,9 @@
+if [ -f /etc/qhap.conf ]
+then
+	echo "BASEDIR=`awk '$1=="machine.install_dir:" { print $2 }' /etc/qhap.conf`" >$1
+	exit 0
+else
+	echo "ERROR:"
+	echo "	Unnable to open /etc/qhap.conf."
+	exit 1
+fi

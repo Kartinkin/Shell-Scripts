@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# @(#) sqlnettest 1.2@(#)
+#
+
+check_connection2()
+{
+  RC=`${ORACLE_HOME}/bin/lsnrctl stat ${SQL_LISTENER}| egrep 'successfully' | tail -1`
+  #RC=`${ORACLE_HOME}/bin/lsnrctl stat | egrep 'CPPR.*service' | tail -1` 
+
+#echo RC=${RC}
+
+  if [ -z "${RC}" ]; then
+    rv=1
+  else
+    rv=0
+  fi
+
+  /bin/rm -f /tmp/$$.*
+
+  return $rv
+}
+
+check_connection1()
+{
+  ${ORACLE_HOME}/bin/tcpctl stat 
+
+  return $?
+}
+
+if test -f ./env
+then
+  . ./env
+fi
+
+if test -z "${ORACLE_HOME}" 
+then
+  echo "Environment variable ORACLE_HOME is not set."
+  echo "Please edit file `pwd`/env"
+  exit 1
+fi
+
+if test -z "${SQLNET_VER}" 
+then
+  echo "Environment variable SQLNET_VER is not set."
+  echo "Please edit file `pwd`/env"
+  exit 1
+fi
+
+
+# Put $ORACLE_HOME/bin into PATH and export.
+PATH=$ORACLE_HOME/bin:${PATH}; export PATH
+
+if test "${SQLNET_VER}" -eq 1
+then
+  check_connection1
+elif test "${SQLNET_VER}" -eq 2
+then
+  check_connection2
+else
+  echo "ORACLE: Unsupported SQLNet version=${SQLNET_VER}."
+  exit 0
+fi
+
+if test "$?" -ne 0
+then
+  echo "ORACLE: sqlnet version ${SQLNET_VER} is down."
+  exit 1
+fi
+
+exit 0

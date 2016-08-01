@@ -1,0 +1,15 @@
+PKG=QUALadd
+NAME=Qualix HA+ addition services
+ARCH=sparc
+VERSION=0.0
+CATEGORY=application
+DESC=DBMS, file system, network and others monitoring
+VENDOR=Jet Infosystems
+HOTLINE=Please call (095) 973-48-48
+EMAIL=service@jet.msk.su
+MAXINST=1000
+CLASSES=none
+PKG_SRC_NOVERIFY= none
+PKG_DST_QKVERIFY= none
+PKG_CAS_PASSRELATIVE= none
+PATCHLIST=

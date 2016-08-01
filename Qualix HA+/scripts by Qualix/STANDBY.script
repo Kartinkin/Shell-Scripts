@@ -1,0 +1,157 @@
+#!/bin/sh
+#
+# Copyright (c) 1996 Qualix Group, Inc. All Rights Reserved.
+#
+# $Id: STANDBY.script,v 1.7 1998/02/04 00:01:53 hle Exp $
+#
+
+topdir=${TOPDIR}
+sgname=${SGNAME}
+sg=sg
+
+bindir=${topdir}/bin
+sgdir=${topdir}/${sg}/${sgname}
+
+# If TOPDIR is not set, very likely that this
+# script was run manually. If so set topdir from pwd
+if test -z "${TOPDIR}"
+then
+  TOPDIR="`pwd`/../.."
+  topdir=${TOPDIR}
+fi
+export TOPDIR
+bindir=${topdir}/bin
+
+# If SGNAME is not set, very likely that this
+# script was run manually. If so set sgname from pwd
+if test -z "${SGNAME}"
+then
+  pwd="`pwd`"
+  SGNAME="`basename ${pwd}`"
+  sgname=${SGNAME}
+fi
+export SGNAME
+sgdir=${topdir}/${sg}/${sgname}
+
+do_services()
+{
+  for i
+  do
+    echo "### sg=${sgname} -- Stopping service=$i ..."
+    SVCNAME=$i
+    export SVCNAME
+    f=${sgdir}/${i}.d/stop
+    if test ! -f "${f}"
+    then
+      echo "file=$f does not exist."
+      echo ""
+      echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 1)."
+      echo ""
+      exit 1
+    fi
+    chmod +x ${f}
+    ${f}
+    status=$?
+    if test "${status}" -ne 0
+    then
+      echo "file=${f} failed with status=$status"
+      echo ""
+      echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 1)."
+      echo ""
+      exit 1
+    else
+      echo "### sg=${sgname} -- Stopped service=$i successfully."
+    fi
+  done
+}
+
+do_STANDBY()
+{
+  export SGNAME
+  f=${bindir}/standby.sh
+  if test ! -f "${f}"
+  then
+    echo "file=$f does not exist."
+    echo ""
+    echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 1)."
+    echo ""
+    exit 1
+  fi
+  chmod +x ${f} 
+  ${f} ${bindir} ${sgdir}
+  status=$?
+  if test "${status}" -ne 0
+  then
+    echo "file=${f} failed with status=$status"
+    echo ""
+    echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 1)."
+    echo ""
+    exit 1
+  fi
+}
+
+do_post_services()
+{
+  for i
+  do
+    SVCNAME=$i
+    export SVCNAME
+    f=${sgdir}/${i}.d/post_stop
+    if test ! -f "${f}"
+    then
+      #echo "Optional file=$f does not exist. OK."
+      continue;
+    fi
+    echo "### sg=${sgname} -- Running post-Stopping script for service=$i ..."
+    chmod +x ${f}
+    ${f}
+    status=$?
+    if test "${status}" -ne 0
+    then
+      echo "file=${f} failed with status=$status"
+      echo ""
+      echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 1)."
+      echo ""
+      exit 1
+    else
+      echo "### sg=${sgname} -- post-Stopping script for service=$i run succesfully."
+    fi
+  done
+}
+
+#echo XXX_IN_QLOCK_XXX=${XXX_IN_QLOCK_XXX}
+
+if test X"${XXX_IN_QLOCK_XXX}" = "X"
+then
+  f=${sgdir}/stop_sequentially
+  if test -f ${f}
+  then
+    echo "### sg=${sgname} -- file=${f} exists. Will stop in sequential mode."
+    argv0=$0
+    argv=$*
+    XXX_IN_QLOCK_XXX=1
+    export XXX_IN_QLOCK_XXX
+    ${bindir}/qlock -d -p "$argv0 $argv" -l ${topdir}/etc/sg.stop.lock
+    status=$?
+
+    exit ${status}
+  else
+   echo ""
+   echo "### `date` - STANDBY.script starts for sg=${sgname}"
+   echo ""
+  fi
+else
+   echo ""
+   echo "### `date` - STANDBY.script starts for sg=${sgname}"
+   echo ""
+fi
+
+
+do_services $*
+do_STANDBY
+do_post_services $*
+
+echo ""
+echo "### `date` - STANDBY.script for sg=${sgname} is DONE (status 0)."
+echo ""
+exit 0

@@ -1,0 +1,63 @@
+#!/bin/ksh
+
+HaltUID=60100
+RebootUID=60101
+GID=60100
+
+function CreateProfile
+{
+	print "Creating 'Shutdown system' profile"
+#	cat /etc/user_attr halt::::type=normal;profiles=Shutdown System
+	print "Shutdown System:suser:cmd:::/usr/sbin/shutdown:uid=0" >>/etc/security/exec_attr
+	print "Shutdown System:::Can shutdown a system:auths=solaris.system.shutdown" >>/etc/security/prof_attr
+}
+
+function UserAdd
+{
+	print "Adding users halt and rebot"
+	groupadd -g ${GID} halt
+	useradd -u ${HaltUID} -g ${GID} -d /export/home/halt -c "User to shutdown a system" -s /bin/pfksh -P "Shutdown System" halt
+	useradd -u ${RebootUID} -g ${GID} -d /export/home/halt -c "User same as halt" -s /bin/pfksh -P "Shutdown System" reboot
+	mkdir -m 775 /export/home/halt
+
+	print "Changing password for halt"
+	passwd halt
+	print "Changing password for reboot"
+	passwd reboot
+}
+
+function CreateUserProfile
+{
+	print "Writeng user's profile"
+	print "\
+echo "You allowed to run only 'reboot' and 'shutdown' commands."
+
+export PATH=.
+alias shutdown='/usr/sbin/shutdown -y -g0 -i5'
+alias reboot='/usr/sbin/shutdown -y -g0 -i6'
+" >/export/home/halt/.profile
+	chmod 444 /export/home/halt/.profile
+}
+
+function DeleteUser
+{
+	print "Removing users halt and reboot"
+	userdel halt
+	userdel reboot
+	groupdel halt
+}
+
+case $1 in
+	userdel) DeleteUser ;;
+	useradd) DeleteUser; CreateProfile; UserAdd; CreateUserProfile ;;
+	roleadd)
+		CreateProfile
+		print 'echo "halt::::type=normal;profiles=Shutdown System" >>/etc/user_attr'
+		print 'echo "reboot::::type=normal;profiles=Shutdown System" >>/etc/user_attr'
+		;;
+
+	*)
+		print "Usage: $0 userdel | useradd | roleadd"
+		;;
+esac
+

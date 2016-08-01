@@ -1,0 +1,169 @@
+#!/usr/xpg4/bin/sh
+# Version	2.1q
+# Date		09 Aug 2000
+# Author	Kirill Kartinkin
+
+# Программа для перевода кластерного сервиса, представленного СУБД INFORMIX,
+# в состояние SERVE.
+#
+# Работа программы гарантирована с СУБД версий 7.xx.
+# Доподлинно известно, что она не поддерживает INFORMIX старше версии 7.
+#
+# Администратор СУБД Informix -- пользователь informix:informix.
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# При запуске программы производятся последовательно следующие действия:
+#	Подключаются все необходимые конфигурационные файлы.
+#	Запускается СУБД INFORMIX в режиме On-Line.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	1	Ошибка вызова
+#	2	INFORMIX не запушен
+#	4	INFORMIX свалился сразу после старта
+#	100	Программу запустили не так
+#	101	Ошибка подключения вспомогательных файлов
+#
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Переменная TOPDIR задает месторасположение Qualix HA+,
+# например, /etc/opt/QUALha.
+# Переменная SGNAME содержит имя сервисной группы
+# Переменная SVCNAME содержит имя сервиса
+ 
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Извлекаем из командной строки имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Домашняя директория администратора СУБД
+InformixHome=~informix
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	"loadenv.ksh <${InformixHome}/.${SGNAME}.environment" \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле ~informix/.${SGNAME}.environment содержатся все необходимые
+# администратору СУБД переменные окружения.
+#	INFORMIXDIR
+#	INFORMIXSERVER
+#	ONCONFIG
+#
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# переменные окружения для пакета.
+#	PIDsFile
+#	SGFacility
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY=${SGFacility}
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# Стартуем INFORMIX OnLine Dynamic Server версии 7.xx в режим On-Line.
+
+Logger info "Starting INFORMIX ODS (${INFORMIXSERVER})..."
+
+# Далее мы будем производить наблюдение за СУБД по pid'ам процессов,
+# а пока запоминаем уже существующие процессы других экземпляров СУБД.
+# Заполняем массив OldProcessesPIDs
+OldProcessesPIDs=$(ps -u informix | awk '$4~"^oninit$" { print $1 }')
+# Удаляем символы '\n' из строки
+OldProcessesPIDs=$(print ${OldProcessesPIDs})
+
+# Поскольку мы уже загрузили настройки пользователя informix,
+# делаем su без "-"
+su informix -c "${INFORMIXDIR}/bin/oninit -y"
+if (( $? != 0 ))
+then
+	# Ошибка, СУБД не запустилась
+	Logger err "INFORMIX ODS not started!"
+	exit 2
+else
+	Logger info "INFORMIX ODS started!"
+fi
+
+# Ни в коем случае не запускаем архивирование логических журналов,
+# т.к. можем затереть предыдущую ленту.
+#su informix -c "~informix/scripts/backup.sh startll"
+
+# Запускаем сборщик статистики onprobe
+#Logger debug "Starting data collector..."
+#su informix -c "${INFORMIXDIR}/bin/onprobe"
+
+################################################################################
+# Строим список pid'ов процессов, в соответствии с которым после и будет
+# проводится мониторинг и останов СУБД.
+
+# Строим список MonitorProcessesPIDs
+# Первый элемент списка -- pid процесса Master Daemon
+# запоминаем пока в отдельной переменной
+ParentPID=$(ps -lu informix | \
+	awk -v Exclude="${OldProcessesPIDs}" \
+		'$NF~"^oninit$" && $5 == "1" && match (" "Exclude" " , " "$4" ") == 0 \
+		{ # Ещем процесс, у которого родитель имеет pid равный 1,
+		  # но который не входит в OldProcessesPIDs
+			print $4 }
+		' )
+# Добавляем найденный pid в OldProcessesPIDs,
+# чтобы не занести потом его в список во второй раз
+OldProcessesPIDs="${ParentPID} ${OldProcessesPIDs}"
+	
+# Начинаем непосредственно строительство списка MonitorProcessesPIDs
+MonitorProcessesPIDs=$(ps -u informix | \
+	awk -v Exclude="${OldProcessesPIDs}" \
+		'$4~"^oninit$" && match (" "Exclude" " , " "$1" ") == 0 \
+		{ # Ещем процесс, который не входит в OldProcessesPIDs
+			print $1 }
+		' )
+# Добавляем ParentPID в массив MonitorProcessesPIDs на первое место
+MonitorProcessesPIDs="${ParentPID} ${MonitorProcessesPIDs}"
+	
+# А есть ли вообще процессы?
+if [[ -z ${MonitorProcessesPIDs} ]]
+then
+	# Ни одного нового процесса INFORMIX не появилось
+	# Сохраняем список процессов
+	ps -el
+	Logger err \
+		"INFORMIX ODS has failed at startup time!"
+	# Выходим с кодом ошибки
+	exit 4
+fi
+
+# Заносим pid'ы в файл
+print ${MonitorProcessesPIDs} >${PIDsFile}
+exit 0

@@ -1,0 +1,234 @@
+#!/usr/xpg4/bin/sh
+# Version	2.1q
+# Date		09 Aug 2000
+# Author	Kirill Kartinkin
+
+# Программа для перевода кластерного сервиса, представленного СУБД INFORMIX,
+# из состояния SERVE в состояния STANDBY или OFFLINE.
+# Работа программы гарантирована с СУБД версий 7.xx.
+# Доподлинно известно, что она не поддерживает INFORMIX старше версии 7.
+#
+# Администратор СУБД Informix -- пользователь informix:informix.
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# Программа производит перевод СУБД в режим Off-Line и, в случае неудачи,
+# убивается оставшиеся процессы.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	0	INFORMIX остановить не удалось, процессы убиты
+#	100	Программу запустили не так
+#	101	Ошибка подключения вспомогательных файлов
+#
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Переменная TOPDIR задает месторасположение Qualix HA+,
+# например, /etc/opt/QUALha.
+# Переменная SGNAME содержит имя сервисной группы
+# Переменная SVCNAME содержит имя сервиса
+ 
+# Устанавливаем необходимые пути поиска
+PATH=/sbin:/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Извлекаем из командной строки имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Домашняя директория администратора СУБД
+InformixHome=~informix
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	"loadenv.ksh <${InformixHome}/.${SGNAME}.environment" \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле ~informix/.${SGNAME}.environment содержатся все необходимые
+# администратору СУБД переменные окружения.
+#	INFORMIXDIR
+#	INFORMIXSERVER
+#	ONCONFIG
+#
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# переменные окружения для пакета.
+#	PIDsFile
+#	SGFacility
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY=${SGFacility}
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+################################################################################
+################################################################################
+# Переводим СУБД INFORMIX OnLine Dynamic Server в состояние Off-Line.
+# Перед остановом прерываем архивирование логических журналов.
+# Если за определенные период времени СУБД не остановилась,
+# ее процессы убиваем наиболее коректным способом.
+	
+# Считываем список pid'ов процессов, созданный для нас при старте.
+set -A MonitorProcessesPIDs $(cat ${PIDsFile})
+
+# Прераваем архивирование логических журналов
+#su informix -c "~informix/scripts/backup.sh stopll"
+
+# Останавливаем все известные системы мониторинга:
+#	oncockpit
+Logger debug "Halting oncockpit..."
+kill $(ps -u informix | \
+	awk '$4~"^oncockpit$" { print $1 }') >/dev/null 2>&1
+
+#	onperf
+Logger debug "Halting onperf..."
+kill $(ps -u informix | \
+	awk '$4~"^onperf$" { print $1 }') >/dev/null 2>&1
+
+#	onprobe
+Logger debug "Halting data collector..."
+OnProvePIDs=$(ps -u informix | awk '$4~"^onprobe$" { print $1 }')
+kill $(onstat -g ses | awk -v OnProbePIDs="${OnProbePIDs}" \
+		'match (" "OnProbePIDs" " , " "$4" ") != 0 \
+			{ # Ищем сессию
+			print $4 }
+	') >/dev/null 2>&1
+
+# Останавливаем СУБД
+Logger info "Stopping INFORMIX ODS (${INFORMIXSERVER})..."
+# Поскольку мы уже загрузили настройки пользователя informix,
+# делаем su без "-"
+# Имеем возможность следить за процессом останова, так как
+# запускаем его в фоновом режиме 
+su informix -c "${INFORMIXDIR}/bin/onmode -ky" &
+onmodePID=$!
+	
+################################################################################
+# Начинаем следить за завершением процессов СУБД
+
+# Переменная задает период мониторинга (в секундах)
+integer moi=5
+# Счетчик циклов мониторинга
+integer TimeoutCounter
+# Вычисляем общее число циклов
+(( TimeoutCounter = Timeout / moi ))
+while (( ${TimeoutCounter} != 0 ))
+do
+	# В теле цикла просматриваем список процессов и,
+	# если какой-нибудь завершился,
+	# выкидываем его из списка
+		
+	# Ждем чуть-чуть
+	sleep ${moi}
+	# Удаляем пустые элементы массива
+	set -A MonitorProcessesPIDs ${MonitorProcessesPIDs[*]}
+	# Переменная p пробегает по списку pid'ов,
+	# а переменная pp хранит номер текущего
+	integer pp=0
+	for p in ${MonitorProcessesPIDs[*]}
+	do
+		# Есть ли такой процесс?
+		kill -0 $p >/dev/null 2>&1
+		if (( $? != 0 ))
+		then
+			# Процесса не найдено
+			Logger debug "${MonitorProcess} (${p}) process has stopped."
+			# Удаляем его pid из списка
+			unset MonitorProcessesPIDs[$pp]
+		fi
+		(( pp = pp + 1 ))
+	done
+
+	if [[ -z ${MonitorProcessesPIDs[*]} ]]
+	then
+		# Массив пустой, все процессы завершились
+		# Можно выходить, но сначала дождемся
+		# завершения 'onmode'
+		wait
+		# Выходим из программы
+		Logger info "INFORMIX ODS stopped."
+		exit 0
+	fi
+
+	(( TimeoutCounter = TimeoutCounter - 1 ))
+done
+
+################################################################################
+# Время ожидания истекло, а процессы не умерли.
+# Убиваем их
+
+# Для начала сохраним список процессов
+ps -el
+	
+# Первым делом убиваем так называемый Master Daemon.
+# Для этого используем сигнал KILL (он игнорирует TERM).
+# Список процессов был составлен таким образом,
+# что этот Master Daemon идет первым номером.
+kill -9 ${MonitorProcessesPIDs[0]} >/dev/null 2>&1
+if (( $? = 0 ))
+then
+	Logger notice "${Name} sent SIGKILL to Master Daemon (${MonitorProcessesPIDs[0]})."
+	# Прибили мы его и ждем, пока детки умрут
+	sleep 30
+fi
+
+unset MonitorProcessesPIDs[0]
+
+# Для верности, если остальные не отвалились,
+# убиваем всех по очереди 
+for p in ${MonitorProcessesPIDs[*]}
+do
+	# Цикл по всем процессам СУБД
+	# Сначала посылаем сигнал TERM.
+	kill $p >/dev/null 2>&1
+	if (( $? = 0 ))
+	then
+		sleep 3
+		# Сигнал, конечно, послан,
+		# но процесс, скорее всего, его не обработает.
+		# Поэтому добиваем его сигналом KILL.
+		kill -9 $p >/dev/null 2>&1
+		if (( $? = 0 ))
+		then
+			Logger notice \
+				"${Name} sent SIGKILL to process ${p}."
+		fi
+	else
+		# Оказывается этого процесса уже нет
+		Logger debug \
+			"${MonitorProcess} (${p}) process has stopped."
+	fi
+done
+
+# Все процессы убили, пришел черед запущенной раннее команды onmode
+kill -9 ${onmodePID} >/dev/null 2>&1
+
+# Возвращаем ошибку
+Logger notice "INFORMIX ODS killed."
+exit 0

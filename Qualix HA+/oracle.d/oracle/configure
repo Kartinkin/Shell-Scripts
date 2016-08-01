@@ -1,0 +1,35 @@
+################################################################################
+################################################################################
+# Внимание! Не стоит менять значение у следующих переменных.
+
+# Имя директории с управляющими файлами
+# Директория создается при установке пакета программ
+DevDir=${TOPDIR}/dev/oracle
+
+# Имя файла, в который будут записаны pid'ы процессов СУБД
+PIDsFile=${DevDir}/${ORACLE_SID}
+
+# Переменная задает имена процессов, образующих СУБД.
+set -A MonitorProcess \
+	ora_smon_${ORACLE_SID} ora_pmon_${ORACLE_SID} \
+	ora_lgwr_${ORACLE_SID} ora_dbwr_${ORACLE_SID} \
+	ora_dbw0_${ORACLE_SID} ora_ckpt_${ORACLE_SID}
+#	ora_reco_${ORACLE_SID}
+set -A ProcessName \
+	"System monitor" \
+	"Process monitor" \
+	"Log writer" \
+	"Database writer" \
+	"Database writer" \
+	"Checkpoint monitor"
+#	"Distributed transaction recovery process"
+
+# Имя файла конфигурации Oracle
+PFile=${ORACLE_HOME}/dbs/init${ORACLE_SID}.ora
+
+# SGA
+SGAdbf=${ORACLE_HOME}/dbs/sgadef${ORACLE_SID}.dbf
+SGAora=${ORACLE_HOME}/dbs/sgadef${ORACLE_SID}.ora
+
+OracleMgrl=${ORACLE_HOME}/bin/svrmgrl
+SQLPlus=${ORACLE_HOME}/bin/sqlplus

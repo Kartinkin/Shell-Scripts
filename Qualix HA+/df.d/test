@@ -1,0 +1,118 @@
+#!/usr/xpg4/bin/sh
+# Version	0.0q
+# Date		31 Jan 2002
+# Author	Kirill Kartinkin
+
+# Программа для проверки наличие свободного места в файловых системах
+# указанных в файле ${SGNAME}/df.tab.
+#
+# TODO: Написать комментарии
+#
+# Программу требуется запускать от имени пользователя root.
+#
+# Внимание! Данная программа работает только совместно с Qualix и только в
+# рамках группы сервисов.
+#
+# Параметры:
+#	нет
+#
+# Возвращаемые значения:
+#	0	O.K.
+#	1	Мало свободного места
+#	101	Ошибка подключения вспомогательных файлов
+
+# Если эти переменные не описаны, значит нас запустили "руками"
+if [[ -z ${TOPDIR} || -z ${SGNAME} || -z ${SVCNAME} ]]
+then
+	# Ошибка, переменные не описаны
+	exit 100
+fi
+
+################################################################################
+# Описываем переменные конфигурации и производим необходимые проверки
+
+# Устанавливаем необходимые пути поиска
+PATH=/usr/sbin:/usr/xpg4/bin:/usr/bin:/var/adm/bin
+
+# Строим расширенное имя программы
+Name=${SGNAME}.${SVCNAME}.${0##*/}
+
+# Внимание! Для работы программы необходимы следующие файлы:
+set -A FilesToSource \
+	${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment \
+	/var/adm/bin/logger.sh
+	
+# В файле ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/environment содержатся
+# основные настроечные параметры пакета.
+#	SGFacility
+#
+# Файле /var/adm/bin/logger.sh содержит функцию Logger
+# Следующие переменные необходимы для описания этой функции.
+# При описании используем одинарные кавычки, чтобы передать имя переменной
+# окружения, а не ее значение.
+LOGGER_FACILITY='${SGFacility}'
+LOGGER_TAG=${SGNAME}
+
+# Добавляем указанные выше файлы
+for File in ${FilesToSource[*]}
+do
+	if [[ -f ${File} ]]
+	then
+		. ${File}
+	else
+		print "${Name}:\tERROR: Unnable to source ${File}"
+		exit 101
+	fi
+done
+
+function Remove
+{
+	CF="$(cat ${ControlFile})"
+	NewCF=$(print "${CF}" | awk -v MP="$1" -v L="$2" '$1!=MP || $2!=L  { print $0 }')
+	if [[ "${CF}" != "${NewCF}" ]]
+	then
+		Logger info "$2 condition finished on file system $1."
+		print "${NewCF}" >${ControlFile}
+	fi
+}
+
+function IsIn
+{
+	grep "^$1 $2" ${ControlFile} 2>/dev/null
+}
+
+################################################################################
+################################################################################
+DFOut=$(df -lk)
+Ret=0
+
+cat ${TOPDIR}/sg/${SGNAME}/${SVCNAME}.d/df.tab | grep -v '^[ \t]*#' | grep -v '^$' | \
+	while read FS Warning Error
+	do
+		Free=$(print "${DFOut}" | awk -v MP="${FS}" '$NF==MP { print $(NF-1) }' | sed -e 's/%//')
+		if (( ${Free} > ${Error} ))
+		then
+			if [[ -z $(IsIn ${FS} Error) ]]
+			then
+				Logger err "File system ${FS} is ${Free}% (>${Error}%) full."
+				print "${DFOut}" | head -1
+				print "${DFOut}" | awk -v MP="${FS}" '$NF==MP { print $0 }'
+				print "${FS} Error" >>${ControlFile}
+				Ret=1
+			fi
+		else
+			Remove ${FS} Error
+			if (( ${Free} > ${Warning} ))
+			then
+				if [[ -z $(IsIn ${FS} Warning) ]]
+				then
+					Logger notice "File system ${FS} is ${Free}% (>${Warning}%) full."
+					print "${FS} Warning" >>${ControlFile}
+				fi
+			else
+				Remove ${FS} Warning
+			fi
+		fi
+	done
+
+exit ${Ret}

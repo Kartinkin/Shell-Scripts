@@ -1,0 +1,16 @@
+PKG=QUALinf
+NAME=Qualix HA+ INFORMIX service
+ARCH=sparc
+VERSION=0.0
+CATEGORY=application
+DESC=Start, stop and test scripts for INFORMIX IDS
+BASEDIR=/tmp/QUALinf
+VENDOR=Jet Infosystems
+HOTLINE=Please contact Jet Infosystems
+EMAIL=service@jet.msk.su
+MAXINST=1000
+CLASSES=none
+PKG_SRC_NOVERIFY= none
+PKG_DST_QKVERIFY= none
+PKG_CAS_PASSRELATIVE= none
+PATCHLIST=
