@@ -1,0 +1,4 @@
+# Input file for extended data collection
+# Format is
+#  damp_root_dir <path to directory where DAMP installed>
+#damp_root_dir /opt/damp

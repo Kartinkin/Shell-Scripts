@@ -1,0 +1,72 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh-dummy-shell.1
+.\"
+.\" Author:     Timo J. Rinne <tri@ssh.com>
+.\"
+.\" Copyright (c) 2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SSH-DUMMY-SHELL 1 "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+ssh-dummy-shell \- Ultimately restricted shell
+
+.SH SYNOPSIS
+.B ssh-dummy-shell
+[\c
+.B \-c sftp-shell\c
+]
+
+.SH DESCRIPTION 
+.LP
+.B ssh-dummy-shell
+is used to provide access to systems where only file transfer
+functionality is permitted.  Users with file transfer only access can 
+have 
+.B ssh-dummy-shell
+as their user shell.
+When executed without any parameters,
+the program waits for user to press any key and exit.  
+The only way to execute programs with
+.B ssh-dummy-shell
+is to give them as command line parameters with the 
+.B \-c
+option.  Even then,
+.B sftp-server
+is the only allowed command.
+
+.SH OPTIONS
+.TP 0.5i
+.B \-c command
+Parameter is executed as a shell command.  Only
+.B sftp-server
+command is allowed.  Any other command causes 
+.B ssh-dummy-shell
+to exit immediately.
+
+.SH RETURN STATUS
+
+.B ssh-dummy-shell
+returns the return value of the given command.  If no command is
+given, 0 will be returned on exit.
+
+.SH FILES
+.TP 
+.I /etc/ssh2/ssh_dummy_shell.out
+Contains the message that is shown to the user when
+.B ssh-dummy-shell
+is executed without any parameters.
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR sftp (1),
+.BR sftp-server (1),
+.BR ssh2 (1),
+.BR sshd2 (8)

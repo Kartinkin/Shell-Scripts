@@ -1,0 +1,106 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh-pubkeymgr.1
+.\"
+.\" Author:     Anne Carasik <anne@ssh.com>
+.\"
+.\" Copyright (c) 2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SSH-PUBKEYMGR 1 "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+ssh-pubkeymgr \- sets up public key authentication for users
+
+.SH SYNOPSIS
+.B ssh-pubkeymgr
+[\c
+.B \-k 
+keypair name\c
+]
+
+.SH DESCRIPTION 
+.LP
+If you have ever dealt with the fun part of creating the user files for
+public key authentication, this script is designed to make it far less
+painful.
+.B ssh-pubkeymgr
+creates the user files needed to use public key authentication with
+.B ssh2.
+The first thing it does is to check for your public keys. If it does not 
+find them, 
+.B ssh-pubkeymgr 
+runs  
+.B ssh-keygen2
+.  Make sure you give ssh-keygen2 a passphrase - you can run 
+.B ssh-agent2 
+later on to store your keys in memory. After this, 
+.B ssh-pubkeymgr
+will create your identification and authorization files if it does not 
+find them in your
+.IR ~/.ssh 
+directory.
+.LP
+After all the files have been created, 
+.B ssh-pubkeymgr 
+provides an interface that can upload your user public key to a remote host using 
+.B scp2.
+ 
+Using the same interface, you can download hostkeys from the desired hosts using 
+.B scp2 
+as well.
+.LP
+.BI Note: 
+All the files 
+.B ssh-pubkeymgr 
+manipulates are located in the 
+.IR ~/.ssh2
+directory.
+.SH OPTIONS
+.TP 0.5i
+.B \-k keypair
+Use the keypair name defined by the user instead of the default (
+.IR id_dsa_1024_a
+). Note that the private key defaults to 
+.IR id_dsa_1024_a 
+and the public key defaults to 
+.IR id_dsa_1024_a.pub. 
+Since the 
+.IR identification
+file uses the name of the private key, this is the option used in 
+.B ssh-pubkeymgr.
+.TP
+.B \-h
+Prints out a small usage summary.
+
+.SH FILES
+.TP 
+.I \&$HOME/\s+2.\s0ssh2/authorization
+Contains the names of the host public keys that are allowed to authenticate to this account.
+.TP 
+.I \&$HOME/\s+2.\s0ssh2/id_dsa_1024_a
+The default DSA private key for the user.
+.TP 
+.I \&$HOME/\s+2.\s0ssh2/id_dsa_1024_a.pub
+The default DSA public key for the user.
+.TP 
+.I \&$HOME/\s+2.\s0ssh2/identification
+Contains names of the private keys that are to be used in authentication.
+See 
+.BR ssh2 (1)
+for more information.
+
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh-agent2 (1),
+.BR ssh-keygen2 (1),
+.BR ssh2 (1),
+.BR scp2 (1),
+.BR sshd2 (8)

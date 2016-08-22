@@ -1,0 +1,61 @@
+#!/bin/ksh -p
+# Version	0.0
+# Date		3 Nov 2001
+# Author	Kirill Kartinkin
+
+################################################################################
+
+# Explorer Version:
+EXP_VERSION=3.6
+
+# Source tools functions
+. ${EXP_LIB}/exp_tools
+
+# Run if specified to do so
+script=$(basename $0)
+which_gate_exit $script default all
+
+require "pkginfo -q VRTSvcs" "VERITAS Cluster Server not installed"
+
+################################################################################
+################################################################################
+
+#get_file /etc/VRTSvcs/conf/config/main.cf	vcs/
+for File in /etc/llt* /etc/gab*
+do
+	get_file ${File} vcs/etc
+done
+
+get_dir /var/VRTSvcs/log			vcs/log
+get_dir recursive /etc/VRTSvcs vcs/etc/VRTSvcs
+get_dir recursive /var/adm/streams vcs/adm/streams
+get_dir recursive /var/adm/VRTSshrd/VRTSlic vcs/var/adm/VRTSshrd/VRTSlic
+
+get_cmd "/sbin/lltstat -vvn"	vcs/lltstat-vvn
+get_cmd "/sbin/lltstat"	vcs/lltstat
+get_cmd "/sbin/gabconfig -a"	vcs/gabconfig-a
+
+get_cmd "/opt/VRTSvcs/bin/hastatus -summary" vcs/hastatus -summary
+get_cmd "/opt/VRTSvcs/bin/hares -display -all" vcs/hares-display-all
+get_cmd "/opt/VRTSvcs/bin/hares -dep"	vcs/hagrp-res
+get_cmd "/opt/VRTSvcs/bin/hagrp -state" vcs/hagrp-state
+get_cmd "/opt/VRTSvcs/bin/hagrp -display -all" vcs/hagrp-display-all
+get_cmd "/opt/VRTSvcs/bin/hagrp -dep"	vcs/hagrp-dep
+get_cmd "/opt/VRTSvcs/bin/hatype -display" vcs/hatype-display
+get_cmd "/opt/VRTSvcs/bin/hasys -display" vcs/hasys-display
+get_cmd "/opt/VRTSvcs/bin/haclus -display" vcs/haclus-display
+
+get_cmd "/opt/VRTSvcs/bin/hasys -state" vcs/hasys-state
+
+for i in $(/opt/VRTSvcs/bin/hasys -list 2>/dev/null)
+do
+	get_cmd "/opt/VRTSvcs/bin/hasys -display $i" vcs/hasys-display-$i
+done
+
+for i in $(/opt/VRTSvcs/bin/hagrp -list  2>/dev/null | awk '{ print $1 }')
+do
+	get_cmd "/opt/VRTSvcs/bin/hagrp -display $i" vcs/hagrp-display-$i
+done
+
+
+	

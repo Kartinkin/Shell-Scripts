@@ -1,0 +1,35 @@
+#!/bin/ksh -p
+# Version	0.0
+# Date		3 Nov 2001
+# Author	Kirill Kartinkin
+
+# Location	/opt/SUNWexplo/tools
+# Permissions	root:bin 0555
+
+################################################################################
+
+# Explorer Version:
+EXP_VERSION=3.6
+
+# Source tools functions
+. ${EXP_LIB}/exp_tools
+script=$(basename $0)
+
+# Run if specified to do so
+which_gate_exit $script default all
+
+require "test -f /etc/qhap.conf" "Qualix HA+ Cluster software not installed"
+
+################################################################################
+################################################################################
+
+get_file /etc/qhap.conf             qualix/etc
+
+QDir=$(awk '$1=="machine.install_dir:" { print $2 }' /etc/qhap.conf)
+
+get_file ${QDir}/etc/machine.conf   qualix
+get_dir recursive ${QDir}/sg        qualix/sg
+get_dir /var/adm/log				qualix/log
+
+get_cmd "${QDir}/bin/qhap cl -g all stat"	qualix/qhap-cl-stat
+get_cmd "${QDir}/bin/qhap cl -g all stat2"	qualix/qhap-cl-stat2

@@ -1,0 +1,898 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh2.1
+.\"
+.\" Author:	Tatu Ylonen <ylo@ssh.com>
+.\"		Markku-Juhani Saarinen <mjos@ssh.com>
+.\"		Sami Lehtinen <sjl@ssh.com>
+.\"		Timo J. Rinne <tri@ssh.com>
+.\"
+.\" Copyright (c) 1998,1999,2000,2001 SSH Communications Security, Finland
+.\" All rights reserved
+.\"
+.TH SSH2 1 "April 15, 2001" "SSH2" "SSH2"
+
+.SH NAME
+ssh2 \- secure shell client (remote login program)
+
+.SH SYNOPSIS
+.B ssh2
+[\c
+.BI \-l \ login_name\fR\c
+]
+.B hostname
+[\c
+.IR command \c
+]
+
+.B ssh2
+[\c
+.BI \-l \ login_name\fR\c
+]
+[\c
+.BI \-n \c
+]
+[\c
+.BI \+a \c
+]
+[\c
+.BI \-a \c
+]
+[\c
+.BI \+x \c
+]
+[\c
+.BI \-x \c
+]
+[\c
+.BI \-i \ file\fR\c
+]
+[\c
+.BI \-F \ file\fR\c
+]
+[\c
+.BI \-t \c
+]
+[\c
+.BI \-v \c
+]
+[\c
+.BI \-d \ debug_level\fR\c
+]
+[\c
+.BI \-V \c
+]
+[\c
+.BI \-q \c
+]
+[\c
+.BI \-f \c
+[\c
+.I o\c
+]\c
+]
+[\c
+.BI \-e \ char\fR\c
+]
+[\c
+.BI \-c \ cipher\fR\c
+]
+[\c
+.BI \-m \ MAC\fR\c
+]
+[\c
+.BI \-p \ port\fR\c
+]
+[\c
+.BI \-S \c
+]
+[\c
+.BI \-L \ [protocol\fB/\fI][localhost:]port\fB:\fIhost\fB:\fIhostport\fR\c
+]
+[\c
+.BI \-R \ [protocol\fB/\fI][localhost:]port\fB:\fIhost\fB:\fIhostport\fR\c
+]
+[\c
+.BI \+C \c
+]
+[\c
+.BI \-C \c
+]
+[\c
+.BI \-o \ `option'\fR\c
+]
+[\c
+.BI \-h \c
+]
+.I [login_name@]hostname[#port]
+[\c
+.IR command \c
+]
+.SH DESCRIPTION 
+.LP
+.B Ssh2
+(Secure Shell) is a program for logging into a remote machine and
+executing commands in a remote machine.  It is intended to replace
+rlogin and rsh, and provide secure, encrypted communications between
+two untrusted hosts over an insecure network.  X11 connections and
+arbitrary TCP/IP ports can also be forwarded over the secure channel.
+.LP
+.B Ssh2 
+connects and logs into the specified 
+.IR hostname .  
+The user must prove his identity to the remote machine using some 
+authentication method.
+.LP
+Public key authentication is based on the use of digital
+signatures. Each user creates a public / private key pair for
+authentication purposes. The server knows the user's public key, and
+only the user has the private key. The filenames of private keys that
+are used in authentication are set in
+.I \&$HOME/\s+2.\s0ssh2/identification.
+When the user tries to authenticate himself, the server checks
+.I \&$HOME/\s+2.\s0ssh2/authorization 
+for filenames of matching public keys and sends a challenge to the user
+end. The user is authenticated by signing the challenge using the
+private key. See the 
+.B FILES
+section below for more information on identification and authorization
+files.
+.LP
+Private / public key pairs can be created with 
+.BR ssh-keygen2 (1). 
+See 
+.BR ssh-agent2 (1)
+for information on how to use public key authentication in conjunction
+with an authentication agent.
+.LP
+If other authentication methods fail, 
+.B ssh2
+will prompt for a password. Since all communications are encrypted,
+the password will not be available for eavesdroppers.
+.LP
+When the user's identity has been accepted by the server, the server
+either executes the given command, or logs into the machine and gives
+the user a normal shell on the remote machine.  All communication with
+the remote command or shell will be automatically encrypted.
+.LP
+If no pseudo tty has been allocated, the session is transparent and can be 
+used to reliably transfer binary data.  
+.LP
+The session terminates when the command or shell in on the remote
+machine exits and all X11 and TCP/IP connections have been closed.
+The exit status of the remote program is returned as the exit status
+of
+.B ssh2.
+.LP
+If the user is using X11 (the
+.B \s-1DISPLAY\s0
+environment variable is set), the connection to the X11 display is
+automatically forwarded to the remote side in such a way that any X11
+programs started from the shell (or command) will go through the
+encrypted channel, and the connection to the real X server will be made
+from the local machine.  The user should not manually set
+.BR \s-1DISPLAY\s0 . 
+Forwarding of X11 connections can be 
+configured on the command line or in configuration files.
+.LP
+The 
+.BR \s-1DISPLAY\s0
+value set by
+.B ssh2
+will point to the server machine, but with a display number greater
+than zero.  This is normal, and happens because
+.B ssh2
+creates a "proxy" X server on the server machine for forwarding the
+connections over the encrypted channel.
+.LP
+.B Ssh2
+will also automatically set up the Xauthority data on the server machine.
+For this purpose, it will generate a random authentication cookie,
+store it in the Xauthority data on the server, and verify that any 
+forwarded connections carry this cookie and replace it with the real 
+cookie when the connection is opened.  The real authentication cookie 
+is never sent to the server machine (and no cookies are sent in the plain).
+.LP
+If the user is using an authentication agent, the connection to the agent
+is automatically forwarded to the remote side unless disabled on
+the command line or in a configuration file.
+.LP
+Forwarding of arbitrary TCP/IP connections over the secure channel can
+be specified either on the command line or in a configuration file.
+TCP/IP forwarding can be used for secure connections to electronic
+purses or for going through firewalls.
+.LP
+.B Ssh2
+automatically maintains and checks a database containing the host public 
+keys. When logging on to a host for the first time, the host's 
+public key is stored in a file
+.I \&\s+2.\s0ssh2/hostkey_PORTNUMBER_HOSTNAME.pub
+in the user's home directory. 
+If a host's identification changes,
+.B ssh2
+issues a warning and disables the password authentication in order to
+prevent a Trojan horse from getting the user's password.  Another
+purpose of this mechanism is to prevent man-in-the-middle attacks
+which could otherwise be used to circumvent the encryption.
+.LP
+.B Ssh2
+has built-in support for SOCKS version 4 for traversing
+firewalls.  See 
+.B ENVIRONMENT\fR.
+.ne 5
+.SH OPTIONS
+.TP
+.BI \-l \ login_name
+Specifies the user for login to the remote machine.  
+.ne 3
+.TP
+.BI \-n
+Redirect input from /dev/null, ie. don't read stdin. This option
+can also be specified in the configuration file.
+.ne 3
+.TP
+.BI \+a
+Enable authentication agent forwarding. (default)
+.ne 3
+.TP
+.BI \-a
+Disable authentication agent forwarding.
+.ne 3
+.TP
+.BI \+x
+Enable X11 connection forwarding. (default)
+.ne 3
+.TP
+.BI \-x
+Disable X11 connection forwarding.
+.ne 3
+.TP
+.BI \-i \ file
+Specifies the identity file for public key authentication. This option
+can also be specified in the configuration file.
+.ne 3
+.TP
+.BI \-F \ file
+Specifies an alternative configuration file to use. NOTE:
+\fI\&$HOME/\s+2.\s0ssh2/ssh2_config\fR is still read, options
+specified here will be used in addition to those.
+.ne 3
+.TP
+.BI \-t
+For tty allocation, ie. allocate a tty even if a command is
+given. This option can also be specified in the configuration
+file.
+.ne 3
+.TP
+.BI \-v
+Enable verbose mode. Display verbose debugging messages. Equal to
+`-d 2'. This option can also be specified in the configuration file.
+.ne 3
+.TP
+.BI \-d \ debug_level
+Print extensive debug information to stderr. debug_level is
+either a number, from 0 to 99, where 99 specifies that all debug
+information should be displayed, or a comma-separated list of
+assignments \fR"\fBModulePattern=debug_level\fR".
+.ne 3
+.TP
+.BI \-V
+Display version string.
+.ne 3
+.TP
+.BI \-q
+Make
+.B ssh2
+quiet, so that it doesn't display any warning messages. This
+option can also be specified in the configuration file.
+.ne 3
+.TP
+.B \-f \fR[\fIo\fR] 
+Fork into background after authentication. This option can also be
+specified in the configuration file. Implies '-S' and '-n'. With this
+option,
+.B ssh2
+stays in the background, waiting for connections indefinitely (it has
+to be killed for it to stop listening). With an optional
+`o' argument, it goes to ``one-shot'' mode, which means that once all
+channels are closed, 
+.B ssh2
+exits.
+.ne 3
+.TP
+.BI \-e \ char
+Set the escape character. Use ``none'' to disable. This option can
+also be specified in the configuration file. (default: ~)
+.ne 3
+.TP
+.BI \-c \ cipher
+Select the encryption algorithm. Multiple -c options are allowed and
+a single -c flag can have only one cipher. This option can also
+be specified in the configuration file. You can use blowfish, twofish,
+cast, arcfour, des, and 3des.
+.ne 3
+.TP
+.BI \-m \ MAC
+Select the MAC (Message Authentication Code) algorithm. Multiple -m
+options are allowed and a single -m flag can have only one MAC. This
+option can also be specified in the configuration file.
+.ne 3
+.TP
+.BI \-p \ port
+Port to connect to on the remote host. This option can also be
+specified in the configuration file.
+.ne 3
+.TP
+.BI \-S
+Don't request a session channel. This can be used with
+port-forwarding requests if a session channel (and tty) isn't
+needed, or the server doesn't give one.
+.ne 3
+.TP
+.BI \-L \ [protocol/][localhost:]port:host:hostport
+Specifies that the given port on the local (client) host is to be
+forwarded to the given host and port on the remote side.  This works
+by allocating a socket to be listened
+.B port
+on the local side. Whenever a connection is made to this port, the
+connection is forwarded over the secure channel and a connection is
+made to
+.B host:hostport
+from the remote machine.  Port forwardings can also be specified in the
+configuration file.  Only root can forward privileged ports. Giving
+the argument
+.B protocol
+enables the protocol-specific forwarding. The
+protocols implemented are
+.I tcp
+(default, no special processing) and
+.I ftp
+(temporary forwardings are created for ftp data channels, effectively
+securing the whole ftp session).
+If
+.B localhost
+is given, forwarding listens only to the interface that is bound
+to the address of the given host.  If it is omitted, all interfaces
+are listened.
+Parameters
+.B localhost
+and
+.B host
+can optionally be enclosed to brackets 
+.I []
+allowing semicolons in
+the parameters.
+.ne 3
+.TP
+.BI \-R \ [protocol/][localhost:]port:host:hostport
+Specifies that the given port on the remote (server) host is to be
+forwarded to the given host and port on the local side.  This works
+by allocating a socket to listen to
+.B port
+on the remote side, and whenever a connection is made to this port, the
+connection is forwarded over the secure channel, and a connection is
+made to
+.B host:hostport
+from the local machine.  Privileged ports can be forwarded only when
+logging in as root on the remote machine. Giving
+the argument
+.B protocol
+enables the protocol-specific forwarding. See the section for
+option
+.B -L
+for a list of possible protocols. 
+If
+.B localhost
+is given, forwarding listens only to the interface that is bound
+to the address of the given host.  If it is omitted, all interfaces
+are listened.
+Parameters
+.B localhost
+and
+.B host
+can optionally be enclosed to brackets
+.I []
+allowing semicolons in
+the parameters.
+.ne 3
+.TP
+.BI \+C
+Enable compression.
+.ne 3
+.TP
+.BI \-C
+Disable compression. (default)
+.ne 3
+.TP
+.BI \-o \ 'option'
+Can be used to specify options in the format used in the configuration
+files.  This is useful for specifying options for which there are no
+separate command-line flags.  The option has the same format as a line
+in the configuration file.  Comment lines are not currently accepted
+via this option. (Egrep regex format is used with these options (where
+applicable))
+.ne 3
+.TP
+.BI \-h
+Display a short help on command-line options.
+.ne 3
+
+.SH CONFIGURATION FILES
+.LP
+.B Ssh2
+obtains configuration data from the following sources (in this
+order): system's global configuration file (typically
+\fI/etc/ssh2/ssh2_config\fR), user's configuration file
+(\fI\&$HOME/\s+2.\s0ssh2/ssh2_config\fR) and the command line
+options.  For each parameter, the last obtained value will be
+effective.
+
+For format of \fIssh2_config\fR, see
+.BR ssh2_config (5).
+
+.TP
+.SH ESCAPE SEQUENCES
+.LP
+
+.B Ssh2 
+supports escape sequences that enable you to have some manageability
+with the session. In order for any escape sequences to take effect,
+you will need to have entered a newline character (read: press enter
+before actually doing any of these operations). What you need to do 
+after that is manually enter the characters (for example, a newline, 
+a tilde ~, and the appropriate character for the appropriate task).
+.TP
+.BI ~.
+Terminate the connection.
+.ne 3
+.TP
+.BI ~^Z
+Suspend the session (press control-Z, not ^ and Z).
+.ne 3
+.TP
+.BI ~~
+Send the escape character.
+.ne 3
+.TP
+.BI ~#
+List forwarded connections. 
+.ne 3
+.TP
+.BI ~-
+Disable the escape character uncancellably.
+.ne 3
+.TP
+.BI ~?
+See a summary of escape sequences.
+.ne 3
+.TP
+.BI ~r
+Initiate rekeying manually.
+.ne 3
+.TP
+.BI ~s
+Give all sorts of statistics on the connection, including server and
+client version, compression, packets in, packets out, compression, key
+exchange algorithms, public key algorithms and symmetric ciphers.
+.ne 3
+.TP
+.BI ~V
+Dump the client version number to stderr (useful for troubleshooting).
+.ne 3
+
+.TP
+.SH ENVIRONMENT
+.LP
+.B Ssh2 
+will normally set the following environment variables:
+.TP
+.B DISPLAY
+The 
+.B DISPLAY 
+variable indicates the location of the X11 server.  It is
+automatically set by
+.B ssh2
+to point to a value of the form "\fBhostname:n\fR" where hostname
+indicates the host where the shell runs, and n is an integer >=
+1.
+.B Ssh2 
+uses this special value to forward X11 connections over the
+secure channel.  The user should normally not set 
+.B DISPLAY
+explicitly, as that will render the X11 connection insecure (and
+will require the user to manually copy any required authorization
+cookies).
+.LP
+.\" .B XXX some of these variables may not be supported yet.
+.ne 3
+.TP
+.B HOME
+Set to the path of the user's home directory.
+.ne 3
+.TP
+.B LOGNAME
+Synonym for 
+.B USER\fR; 
+set for compatibility with systems using this variable.
+.ne 3
+.TP
+.B MAIL
+Set to point the user's mailbox.
+.ne 3
+.TP
+.B PATH
+Set to the default PATH, as specified when compiling
+.B ssh2
+or, on some systems, 
+.I /etc/environment 
+or 
+.IR /etc/default/login .
+.ne 3
+.TP
+.B SSH_SOCKS_SERVER
+If SOCKS is used, it is configured with this variable.
+The format of the variable is
+.I socks://username@socks_server:port/network/netmask,network/netmask ...
+for example by setting environment variable 
+.B SSH_SOCKS_SERVER
+to
+.I socks://mylogin@socks.ssh.com:1080/203.123.0.0/16,198.74.23.0/24
+uses host 
+.I socks.ssh.com
+port
+.I 1080
+as your SOCKS server if connection is attempted outside of
+networks 
+.I 203.123.0.0
+(16 bit domain) and
+.I 198.74.23.0
+(8 bit domain) which are connected directly.
+
+A default value for 
+.B SSH_SOCKS_SERVER
+variable can be specified at compile time by specifying
+.BI --with-socks-server=VALUE
+on the configure command line when compiling
+.B ssh2\fR.
+The default value can be cancelled by setting 
+.B SSH_SOCKS_SERVER 
+to an empty string, and overridden by setting
+.B SSH_SOCKS_SERVER 
+to a new value.
+If the 
+.B SSH_SOCKS_SERVER 
+variable is set, it should almost always contain local loopback
+network (127.0.0.0/8) as network that is connected directly.  
+.ne 3
+.TP
+.B SSH2_AUTH_SOCK
+If this exists, it is used to indicate the path of a unix-domain socket 
+used to communicate with the authentication agent (or its local
+representative).
+.ne 3
+.TP
+.B SSH2_CLIENT
+Identifies the client end of the connection.  The variable contains
+three space-separated values: client ip-address, client port number,
+and server port number.
+.ne 3
+.TP
+.B SSH2_ORIGINAL_COMMAND
+This will be the original command given to 
+.B ssh2 
+if a forced command is run. It can be used to fetch arguments etc.
+from the other end. This does not have to be a real command, it can be 
+the name of a file, device, parameters or anything else.
+.ne 3
+.TP
+.B SSH2_TTY
+This is set to the name of the tty (path to the device) associated
+with the current shell or command.  If the current session has no tty,
+this variable is not set.
+.ne 3
+.TP
+.B TZ
+The timezone variable is set to indicate the present timezone if it
+was set when the daemon was started (the daemon passes the value
+to new connections).
+.ne 3
+.TP
+.B USER
+Set to the name of the user logging in.
+.LP
+.RT
+Additionally, 
+.B ssh2
+reads 
+.I /etc/environment 
+and 
+.IR $HOME/.ssh2/environment , 
+and adds lines of
+the format 
+.I VARNAME=value
+to the environment.  Some systems may have
+still additional mechanisms for setting up the environment, such as
+.I /etc/default/login
+on Solaris.
+
+.ne 3
+.SH FILES
+.TP
+.I \&$HOME/\s+2.\s0ssh2/random_seed
+Used for seeding the random number generator.  This file contains
+sensitive data and its permissions should be 'read/write' for the user 
+and 'not accessible' for others.  This file is created the first time the 
+program is run and it is updated automatically.  The user should never 
+need to read or modify this file.
+.ne 3
+.TP
+.I \&$HOME/\s+2.\s0ssh2/ssh2_config
+This is the per-user configuration file.  The format of this file is
+described above.  This file is used by the
+.B ssh2
+client.  This file does not usually contain any sensitive information,
+but the recommended permissions are 'read/write' for the user, 
+and 'not accessible' for others. 
+.ne 3
+.TP
+.I \&$HOME/\s+2.\s0ssh2/identification
+contains information on how the user wishes to authenticate himself
+when contacting a specific host.
+
+The identification file has the same general syntax as the configuration
+files. The following keywords may be used:
+.TP
+.B IdKey
+This is followed by the filename of a private key in the
+.I \&$HOME/\s+2.\s0ssh2
+directory used for identification when contacting a host.
+If there are more than one 
+.B IdKeys
+, they are tried in the order that they appear in the identification
+file.
+.TP
+.B PgpSecretKeyFile
+This is followed by the filename of the user's OpenPGP private keyring 
+in the
+.I \&$HOME/\s+2.\s0ssh2
+directory.  OpenPGP keys listed after this line are expected to be found 
+from this file.  Keys identified with "\fBIdPgpKey*\fR"-keywords are
+used like ones identified with "\fBIdKey\fR"-keyword.
+.TP
+.B IdPgpKeyName
+This is followed by the OpenPGP key name of the key in 
+.B PgpSecretKeyFile
+file.
+.TP
+.B IdPgpKeyFingerprint
+This is followed by the OpenPGP key fingerprint of the key in 
+.B PgpSecretKeyFile
+file.
+.TP
+.B IdPgpKeyId
+This is followed by the OpenPGP key ID of the key in 
+.B PgpSecretKeyFile
+file.
+
+.TP
+.I \&$HOME/\s+2.\s0ssh2/authorization
+contains information on how the server will verify the identity of
+an user.
+
+The authorization file has the same general syntax as the configuration
+files. The following keywords may be used:
+.TP
+.B Key
+This is followed by the filename of a public key in the
+.I \&$HOME/\s+2.\s0ssh2
+directory that is used for identification when contacting the host.
+If there are more than one key, they are all acceptable for login.
+.TP
+.B PgpPublicKeyFile
+This is followed by the filename of the user's OpenPGP public keyring in
+.I \&$HOME/\s+2.\s0ssh2
+directory.  OpenPGP keys listed after this line are expected to be found 
+from this file.  Keys identified with "\fBPgpKey*\fR"-keywords are
+used like ones identified with "\fBKey\fR"-keyword.
+.TP
+.B PgpKeyName
+This is followed by the OpenPGP key name.
+.TP
+.B PgpKeyFingerprint
+This is followed by the OpenPGP key fingerprint.
+.TP
+.B PgpKeyId
+This is followed by the OpenPGP key ID.
+.TP
+.B Options
+This keyword, if used, must follow the "\fBKey\fR" or "\fBPgpKey*\fR"
+keyword above. The various options are specified as comma separated
+list. See Section "\fBPUBLIC KEY OPTIONS\fR" for documentation of the
+options.
+
+.TP
+.B Command
+This keyword is deprecated (though it still works), use
+.B Options
+instead.
+
+.TP 
+.I \&$HOME/\s+2.\s0ssh2/hostkeys/key_xxxx_yyyy.pub
+These files are the public keys of the hosts you connect to. These
+are updated automatically, unless you have set
+.B StrictHostKeyChecking
+to "\fByes\fR". If a host's key changes, you should put here the new
+key. (But don't do that, unless you can be sure the key is valid,
+ie. that no man-in-the-middle attack has occurred!)
+The "\fIxxxx\fR" is the port on the server, where
+.B sshd2
+runs, and the "\fIyyyy\fR" is the host (specified on command-line).
+
+.TP 
+.I /etc/ssh2/hostkeys/key_xxxx_yyyy.pub
+If a host key is not found from the users
+"\fI\&$HOME/\s+2.\s0ssh2/hostkeys\fR" directory, this is the next 
+location to be checked. These files have to be updated manually; no 
+files are put here automatically.
+
+.TP
+.I \&$HOME/\s+2.\s0rhosts
+This file contains host-username pairs, separated by a space, one per
+line.  The given user on the corresponding host is permitted to log in
+without password.  The same file is used by rlogind and rshd.
+.B sshd2 
+differs from rlogind and rshd in that it requires public host key
+authentication in addition to validating the host name retrieved from
+domain name servers. The file must be writable only by the user; it
+is recommended that it not be accessible by others.
+
+It is also possible to use netgroups in the file.  Either host or user
+name may be of the form +@groupname to specify all hosts or all users
+in the group.
+.TP
+.I \&$HOME/\s+2.\s0shosts
+For
+.B ssh2,
+this file is exactly the same as for \s+2.\s0rhosts.  However, this file is
+not used by rlogin and rshd, so using this permits access using
+.B ssh2
+only.
+.TP
+.I /etc/hosts.equiv
+This file is used during \s+2.\s0rhosts authentication.  In its
+simplest form, this file contains host names, one per line.  Users on
+those hosts are permitted to log in without a password, provided that 
+they have the same user name on both machines.  The host name may also be
+followed by a user name; such users are permitted to log in as
+.B any
+user on this machine (except root).  Additionally, the syntax +@group
+can be used to specify netgroups.  Negated entries start with \'-\'.
+
+If the client host/user is successfully matched in this file, login is
+automatically permitted, provided that the client and server user names 
+are the same.  Additionally, successful public key host authentication is 
+normally required.  This file must be writable only by root; it is 
+recommended that it be world-readable.
+
+\fBWarning: It is almost never a good idea to use user names in 
+hosts.equiv.\fR
+Note that this really means that the named user(s) can log in as
+\fBanybody\fR,
+including bin, daemon, adm, and other accounts that own critical
+binaries and directories.  Using a user name practically grants the
+user root access.  The only valid use for user names should be in 
+negative entries.
+\fBNote that this warning also applies to rsh/rlogin.\fR
+.TP
+.I /etc/shosts.equiv
+This is processed exactly as
+.I /etc/hosts.equiv.
+However, this file may be useful in environments that want to run both
+rsh/rlogin and
+.B ssh2.
+
+.TP
+.I \&$HOME/\s+2.\s0ssh2/knownhosts/xxxxyyyy.pub
+These are the public hostkeys of hosts that a user wants to log from
+using "\fBhostbased\fR"-authentication (equivalent with ssh1's
+\fBRhostsRSAAuthentication\fR). Also, a user has to set up her/his
+\fI$HOME/.shosts\fR (which only ssh uses) or \fI$HOME/.rhosts\fR file.  
+(This is insecure, as the file is used also by the r*-commands.) 
+If username is the same in both hosts, it is adequate to put the 
+public hostkey to
+\fI/etc/ssh2/knownhosts\fR and add the host's name to
+\fI/etc/shosts.equiv\fR (or \fI/etc/hosts.equiv\fR).
+
+xxxx denotes the hostname (FQDN) and yyyy the publickey
+algorithm of the key.
+
+For example, zappa.foo.fi's hostkey algorithm is ssh-dss. The hostkey
+would be named "\fIzappa.foo.fi.ssh-dss.pub\fR" in the
+knownhosts-directory.
+
+Possible names for publickey-algorithms are "\fBssh-dss\fR" and
+"\fBssh-rsa\fR" (without the quotes).
+
+.TP
+.I /etc/ssh2/knownhosts/xxxxyyyy.pub
+As above, but system-wide. These settings can be overridden by the 
+user by putting a file with the same name to her/his
+\fI$HOME/.ssh2/knownhosts\fR directory.
+
+.SH PUBLIC KEY OPTIONS
+Options are specified as a comma-separated list.
+
+.TP
+.B allow-from \fRand\fB deny-from
+Specifies that in addition to publickey authentication, the canonical
+name of the remote host must match the pattern(s).  These parameters
+follow the logic of \fB{Allow,Deny}Hosts\fR, described in detail in
+\fBsshd2_config(5)\fR. Specify one pattern per keyword, and multiple
+keywords can be used. See \fBExamples\fR, below.
+.TP
+.B command="\fIcommand\fB"
+This is used to specify a "forced command" that will be executed on
+the server side instead of anything else when the user is
+authenticated.  The command supplied by the user (if any) is put in
+the environment variable "\fBSSH2_ORIGINAL_COMMAND\fR".  The command
+is run on a pty if the connection requests a pty; otherwise it is run
+without a tty.  A quote may be included in the command by quoting it
+with a backslash.  This option might be useful for restricting certain
+public keys to perform just a specific operation.  An example might be
+a key that permits remote backups but nothing else.  Notice that the
+client may specify TCP/IP and/or X11 forwardings, unless they are
+explicitly prohibited.
+.TP
+.B environment="\fINAME=value\fB"
+Specifies that the string is to be added to the environment when
+logging in using this key.  Environment variables set this way
+override other default environment values.  Multiple options of this
+type are permitted.
+.TP
+.B idle-timeout=\fRtime\fB
+Sets idle timeout limit to time in seconds (s or nothing after
+number), in minutes (m), in hours (h), in days (d), or in weeks (w).
+If the connection have been idle (all channels) for that long time the
+connection is closed down.
+.TP
+.B no-port-forwarding
+Forbids TCP/IP forwarding when this key is used for authentication.
+Any port forward requests by the client will return an error.  This
+might be used e.g.  in connection with the command option.
+.TP
+.B no-x11-forwarding
+Forbids X11 forwarding when this key is used for authentication.  Any
+X11 forward requests by the client will return an error.
+.TP
+.B no-agent-forwarding
+Forbids authentication agent forwarding when this key is used for
+authentication.
+.TP
+.B no-pty
+Prevents tty allocation (a request to allocate a pty will fail).
+
+.SS Examples
+.LP
+Options allow-from=".*\\.niksula\\.hut\\.fi", deny-from="pc\\.niksula\\.hut\\.fi"
+.LP
+Options command="echo $SSH2_ORIGINAL_COMMAND $FOO $BAR", environment="FOO=zuppa", environment="BAR=zappa", allow-from="kungfoo.org", allow-from="linux.com"
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh2_config (5),
+.BR sshd2 (8),
+.BR sshd2_config (5),
+.BR ssh-keygen2 (1),
+.BR ssh-agent2 (1),
+.BR ssh-add2 (1),
+.BR scp2 (1),
+.BR sftp (1)
+.BR rlogin (1),
+.BR rsh (1),
+.BR telnet (1)

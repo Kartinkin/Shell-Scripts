@@ -1,0 +1,16 @@
+PKG=JETexplo
+NAME=Explorer Data Collector Addons
+ARCH=sparc
+VERSION=1.02
+CATEGORY=application
+DESC=System Information gatherer for Sun Proactive Services
+VENDOR=Jet Infosystems
+HOTLINE=Please call (095) 973-48-48
+EMAIL=service@jet.msk.su
+MAXINST=1000
+CLASSES=none tool build
+PKG_SRC_NOVERIFY=none
+PKG_DST_QKVERIFY=none
+PKG_CAS_PASSRELATIVE=none
+PATCHLIST=
+PSTAMP=undead20050831161809

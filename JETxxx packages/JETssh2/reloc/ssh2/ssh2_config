@@ -1,0 +1,98 @@
+## SSH CONFIGURATION FILE FORMAT VERSION 1.1
+## REGEX-SYNTAX egrep
+## end of metaconfig
+## (leave above lines intact!)
+## ssh2_config
+## SSH 3.0 Client Configuration File
+##
+
+## The ".*" is used for all hosts, but you can use other hosts as
+## well.
+.*:
+
+## General
+
+#	VerboseMode			no
+#	QuietMode			yes
+#	DontReadStdin			no
+#	BatchMode			yes
+#	Compression			yes
+#	ForcePTTYAllocation		yes
+#	GoBackground			yes
+#	EscapeChar			~
+#	PasswordPrompt			"%U@%H's password: "
+#	PasswordPrompt			"%U's password: "
+#	AuthenticationSuccessMsg	yes
+
+
+## Network
+
+#	Port				22
+#	NoDelay				no
+#	KeepAlive			yes
+#	SocksServer			socks://mylogin@socks.ssh.com:1080/203.123.0.0/16,198.74.23.0/24
+
+
+## Crypto
+
+#	Ciphers				AnyStdCipher 
+#	MACs				AnyMAC
+#	StrictHostKeyChecking           ask	
+#	RekeyIntervalSeconds		3600
+
+	
+## User public key authentication
+
+#	IdentityFile			identification
+#	AuthorizationFile		authorization
+#	RandomSeedFile			random_seed
+
+
+## Tunneling
+
+#	GatewayPorts			yes
+#	ForwardX11			yes
+#	ForwardAgent			yes
+
+	
+# Tunnels that are set up upon logging in
+
+#	LocalForward			"110:pop3.ssh.com:110"
+#	RemoteForward			"3000:foobar:22"
+
+
+## SSH1 Compatibility
+
+#	Ssh1InternalEmulation		yes
+#       Ssh1Compatibility               yes
+#	Ssh1AgentCompatibility		none
+#	Ssh1AgentCompatibility		traditional
+#	Ssh1AgentCompatibility		ssh2
+#	Ssh1Path			/usr/local/bin/ssh1			
+
+## Authentication 
+## Hostbased is not enabled by default.
+
+#	AllowedAuthentications		hostbased,publickey,password
+#	AllowedAuthentications		publickey,password
+
+
+# For ssh-signer2 (only effective if set in the global configuration
+# file, usually /etc/ssh2/ssh2_config)
+
+#	DefaultDomain			foobar.com
+#	SshSignerPath			ssh-signer2
+
+
+## Examples of per host configurations
+
+#alpha*:
+#	Host				alpha.oof.fi
+#	User				user
+#	PasswordPrompt			"%U:s password at %H: "
+#	Ciphers				idea
+
+#foobar:
+#	Host				foo.bar
+#	User				foo_user
+

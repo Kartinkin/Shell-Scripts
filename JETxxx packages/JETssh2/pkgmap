@@ -1,0 +1,64 @@
+: 1 75120
+1 d none bin 0755 bin bin
+1 s none bin/scp=scp2
+1 f none bin/scp2 0755 bin bin 1802092 38569 998997686
+1 s none bin/sftp=sftp2
+1 s none bin/sftp-server=sftp-server2
+1 f none bin/sftp-server2 0755 bin bin 775476 50983 998997699
+1 f none bin/sftp2 0755 bin bin 2037476 12178 998997687
+1 s none bin/ssh=ssh2
+1 s none bin/ssh-add=ssh-add2
+1 f none bin/ssh-add2 0755 bin bin 4139892 17978 998997694
+1 s none bin/ssh-agent=ssh-agent2
+1 f none bin/ssh-agent2 0755 bin bin 3855440 34323 998997689
+1 s none bin/ssh-askpass=ssh-askpass2
+1 f none bin/ssh-askpass2 0755 bin bin 332448 38697 998997697
+1 f none bin/ssh-chrootmgr 0755 bin bin 2583 60356 998997706
+1 f none bin/ssh-dummy-shell 0755 bin bin 62716 23245 998997699
+1 s none bin/ssh-keygen=ssh-keygen2
+1 f none bin/ssh-keygen2 0755 bin bin 3835516 33464 998997691
+1 f none bin/ssh-pam-client 0755 bin bin 556628 4600 998997698
+1 s none bin/ssh-probe=ssh-probe2
+1 f none bin/ssh-probe2 0755 bin bin 858860 37358 998997696
+1 f none bin/ssh-pubkeymgr 0755 bin bin 7563 36270 998997706
+1 s none bin/ssh-signer=ssh-signer2
+1 f none bin/ssh-signer2 4711 bin bin 3787120 64384 998997696
+1 f none bin/ssh2 0755 bin bin 6412964 17183 998997685
+1 d none man 0755 bin bin
+1 d none man/man1 0755 bin bin
+1 s none man/man1/scp.1=scp2.1
+1 f none man/man1/scp2.1 0644 bin bin 4887 10598 998997708
+1 s none man/man1/sftp.1=sftp2.1
+1 f none man/man1/sftp2.1 0644 bin bin 8756 17529 998997708
+1 s none man/man1/ssh-add.1=ssh-add2.1
+1 f none man/man1/ssh-add2.1 0644 bin bin 4789 15071 998997707
+1 s none man/man1/ssh-agent.1=ssh-agent2.1
+1 f none man/man1/ssh-agent2.1 0644 bin bin 4688 15447 998997707
+1 f none man/man1/ssh-chrootmgr.1 0644 bin bin 2586 24145 998997710
+1 f none man/man1/ssh-dummy-shell.1 0644 bin bin 1511 61285 998997709
+1 s none man/man1/ssh-keygen.1=ssh-keygen2.1
+1 f none man/man1/ssh-keygen2.1 0644 bin bin 3699 43174 998997707
+1 s none man/man1/ssh-probe.1=ssh-probe2.1
+1 f none man/man1/ssh-probe2.1 0644 bin bin 1500 59088 998997709
+1 f none man/man1/ssh-pubkeymgr.1 0644 bin bin 2453 9014 998997709
+1 s none man/man1/ssh.1=ssh2.1
+1 f none man/man1/ssh2.1 0644 bin bin 26340 17613 998997707
+1 f none man/man1/sshregex.1 0644 bin bin 11905 3195 998997709
+1 d none man/man5 0755 bin bin
+1 f none man/man5/ssh2_config.5 0644 bin bin 14301 16394 998997710
+1 f none man/man5/sshd-check-conf.5 0644 bin bin 2585 20488 998997710
+1 f none man/man5/sshd2_config.5 0644 bin bin 21446 63741 998997710
+1 d none man/man8 0755 bin bin
+1 s none man/man8/sshd.8=sshd2.8
+1 f none man/man8/sshd2.8 0644 bin bin 9820 3244 998997711
+1 i pkginfo 192 15354 999083096
+1 d none sbin 0755 bin bin
+1 s none sbin/sshd=sshd2
+1 f none sbin/sshd-check-conf 0755 bin bin 3721180 3985 998997705
+1 f none sbin/sshd2 0755 bin bin 5966492 57580 998997702
+1 d none ssh2 0755 bin bin
+1 f none ssh2/hostkey 0600 bin bin 828 1107 998998126
+1 f none ssh2/hostkey.pub 0644 bin bin 697 56526 998998126
+1 f none ssh2/ssh2_config 0644 bin bin 1900 18209 998998126
+1 f none ssh2/ssh_dummy_shell.out 0644 bin bin 122 10754 998998126
+1 f none ssh2/sshd2_config 0644 bin bin 3921 61698 998998126

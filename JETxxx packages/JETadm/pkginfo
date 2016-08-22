@@ -1,0 +1,17 @@
+PKG=JETadm
+NAME=Admin scripts
+ARCH=sparc
+VERSION=1.5
+CATEGORY=application
+DESC=Scripts for system administrator
+BASEDIR=/opt/JETadm
+VENDOR=Jet Infosystems
+HOTLINE=Please contact Jet Infosystems
+EMAIL=service@jet.msk.su
+MAXINST=1000
+CLASSES=none
+PKG_SRC_NOVERIFY=none
+PKG_DST_QKVERIFY=none
+PKG_CAS_PASSRELATIVE=none
+PATCHLIST=
+PSTAMP=undead20011109165620

@@ -1,0 +1,45 @@
+:
+# Version	1.2 2000/02/06
+# Date		02 Jun 2000
+# Author	Heiner Steven (heiner.steven@odn.de)
+#
+# Description
+#	Prints the given files to standard output. Comments and empty
+#		lines are removed, and with "\" continued lines are concatenated
+#	Comments start with a "#" character, and extend to the end of
+#		the line. Use a leading "\" for a literal "#" character.
+
+################################################################################
+# Print files without empty lines and comments
+# Description:
+#    o	Label "loop" concatenates with "\" continued lines
+#    o	processing of quoted '#' characters
+#    o  comments are removed
+#	- lines consisting entirely of comments
+#	- lines with trailing comments
+#    o  empty lines are removed
+
+cat "$@" | sed -n -e '
+    :loop
+    /\\$/{
+    h; n; H; x
+    s/\\\n//
+    b loop
+    }
+
+    /\\#/{
+    s/\\#/#/g
+    b skip
+    }
+
+    /^[ 	]*#/d
+    /[ 	][ 	]*#/{
+    s/^\(.*\)#.*$/\1/
+    }
+
+    :skip
+    s/[ 	]*$//
+    /^$/d
+
+    p
+'

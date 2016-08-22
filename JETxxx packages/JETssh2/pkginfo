@@ -1,0 +1,10 @@
+PKG=JETssh2
+NAME=ssh2 version 3.0.1
+VERSION=3.0.1
+ARCH=Solaris 2.6
+CLASSES=none
+CATEGORY=application
+VENDOR=Jet Infosystems
+PSTAMP=Andrew V. Jemerya
+EMAIL=jema@jet.msk.su
+BASEDIR=/opt/JETssh2

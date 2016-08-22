@@ -1,0 +1,19 @@
+: 1 74
+1 d none /etc 0755 root bin
+1 d none /etc/opt 0755 root bin
+1 d none /etc/opt/SUNWexplo 0755 root bin
+1 d none /etc/opt/SUNWexplo/default 0755 root bin
+1 e build /etc/opt/SUNWexplo/default/abs 0644 root bin 606 46176 1092212878
+1 f none /etc/opt/SUNWexplo/hiinput.txt 0644 root bin 137 12316 1122529173
+1 i depend 710 56174 1019728212
+1 i i.tool 200 15425 1122529811
+1 i pkginfo 384 31279 1125490689
+1 i r.tool 18 1246 1039169054
+1 i request 3020 30434 1119345537
+1 d none tools 0555 root bin
+1 e tool tools/absural 0555 root bin 3557 17238 1094801262
+1 e tool tools/emulex 0555 root bin 1737 11903 1122545980
+1 e tool tools/hitachi 0555 root bin 7282 46065 1122529590
+1 e tool tools/qualix 0555 root bin 1000 5997 1092308195
+1 e tool tools/vcs 0555 root bin 1900 21563 1122530265
+1 e tool tools/xntp 0555 root bin 232 19501 1030003815

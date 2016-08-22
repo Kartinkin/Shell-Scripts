@@ -1,0 +1,33 @@
+#
+#  Build script for etc/default/abs
+#
+
+# Define EXP_ETC variable
+EXP_ETC="/etc/opt/SUNWexplo"
+
+if [ "$1" = install ]
+then
+	# File header
+	echo "#!/bin/ksh -p"
+	echo "# ABS Ural defaults file"
+	echo "# This file is Korn shell source and is read by the explorer program"
+	echo "# Modified on `date` by pkgadd"
+	echo ""
+	# Variables
+env | grep ABS_
+#	for VAR in `env | grep ABS_ | awk -F= '{print $1}'`
+#	do
+#		# Record
+#		V=$"$1"
+#		Value=`eval echo "${V}"`
+#		echo "${V}=${Value}"
+#    done
+fi
+
+if [ "$1" = remove ]
+then
+    if [ -f "${EXP_ETC}/default/abs" ]
+	then
+		cat ${EXP_ETC}/default/abs
+    fi
+fi

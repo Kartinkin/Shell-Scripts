@@ -1,0 +1,733 @@
+.\"  -*- nroff -*-
+.\"
+.\" sshd2_config.5
+.\"
+.\" Author:     Tatu Ylonen <ylo@ssh.com>
+.\"             Markku-Juhani Saarinen <mjos@ssh.com>
+.\"		Sami Lehtinen <sjl@ssh.com>
+.\"
+.\" Copyright (C) 1997,1998,1999,2000,2001 SSH Communications Security, Finland
+.\" All rights reserved
+.\"
+.TH SSHD2_CONFIG 5 "May 23, 2001" "SSH2" "SSH2"
+
+.SH NAME
+sshd2_config \- format of configuration file for sshd2
+
+.SH CONFIGURATION FILE
+
+.B Sshd2
+reads configuration data from 
+.I /etc/ssh2/sshd2_config
+(or the file specified with -f on the command line).  The file
+contains keyword-value pairs, one per line.  Lines starting with \'#\'
+and empty lines are interpreted as comments.
+
+For a description of the configuration file format, see
+\fBssh2_config\fR(5).
+
+The following keywords are possible. Keywords are case insensitive.
+
+.de YN
+"\fByes\fR" or "\fBno\fR".
+..
+
+.TP
+\fBAllowAgentForwarding\fR or \fBForwardAgent\fR
+Specifies whether agent forwarding is permitted. This parameter is
+implemented mainly for completeness. Usually, you should allow users to
+freely forward agent connections. The argument must be
+.YN
+The default is "\fByes\fR".
+.ne 3
+
+.TP
+.B AllowedAuthentications
+This keyword specifies the authentications methods that are allowed. Please note
+that the order is important for when you're trying to connect. If you put 
+hostbased first, it will try hostbased before trying any of the other means of 
+authentication. This is a comma-separated list currently consisting of the 
+following words:
+.BR password,
+.B publickey 
+.B pam-1@ssh.com,
+and
+.BR hostbased .
+Each specifies an authentication method. The default is
+"\fBpublickey,password\fR". With
+.BR RequiredAuthentications ,
+the system administrator can force users to complete several authentications
+before they are considered authenticated. Like in AllowedAuthentications, it's 
+important how the options are ordered. The same options for AllowedAuthentications are used here.
+.ne 3
+
+.TP
+.B AllowGroups
+This keyword can be followed by any number of group name patterns,
+separated by commas. If specified, login is allowed only if one of the
+groups the user belongs to matches one of the patterns. Patterns are
+matched using the egrep syntax (see sshregex(1)), or the syntax
+specified by ``\fImetaconfig\fR''. You can use the comma \',\'
+character in the patterns by escaping it with '\\' (backslash). By
+default, all users are allowed to log in.
+
+Note that the all other login authentication steps must still be
+successfully completed.  \fBAllowGroups\fR and \fBDenyGroups\fR are
+additional restrictions.
+.ne 3
+
+.TP
+.B AllowHosts
+This keyword can be followed by any number of host name patterns,
+separated by commas.  If specified, login is allowed only from hosts
+whose name matches one of the patterns.  Patterns are matched using
+the egrep syntax (see sshregex(1)), or the syntax specified by
+``\fImetaconfig\fR''. If you wish that the pattern will only be
+matched with the hosts IP-address (thereby ignoring the canonical host
+name), you should prefix your pattern with "\\i". Normal name servers
+are used to map the client's host name into a canonical host name.  If
+the name cannot be mapped, the IP address is used as the host name.
+By default, all hosts are allowed to connect.
+
+Note that
+.B sshd2
+can also be configured to use tcp_wrappers using the --with-libwrap
+compile-time configuration option.
+.ne 3
+
+.TP
+.B AllowSHosts
+This keyword can be followed by any number of host name patterns,
+separated by commas. If specified, the .shosts (and .rhosts,
+/etc/hosts.equiv and /etc/shosts.equiv) entries are only honored for
+hosts whose name matches one of the patterns.
+Otherwise, this parameter is parsed and matched the same way as
+.BR AllowHosts .
+.ne 3
+
+.TP
+.B AllowTcpForwarding
+Specifies whether TCP forwarding is permitted. Note that disabling TCP
+forwarding does not improve security in any way, as users can always
+install their own forwarders.  The argument must be
+.YN
+The default is "\fByes\fR".
+.ne 3
+
+.TP
+.B AllowTcpForwardingForGroups
+The syntax is the same as in \fBAllowGroups\fR, but instead of login, 
+this controls the ability to forward ports, in remote or local
+forwarding. Note that disabling TCP forwarding does not improve
+security in any way, as users can always install their own
+forwarders. This does, however, help if you deny the user shell access
+at the same time. See
+.BR ssh-dummy-shell (1).
+The argument must be
+.YN
+Forwarding is enabled by default.
+.ne 3
+
+.TP
+.B AllowTcpForwardingForUsers
+Syntax is the same as in \fBAllowUsers\fR, but instead of login, this
+controls the ability to forward ports, in remote or local
+forwarding. Note that disabling TCP forwarding does not improve
+security in any way, as users can always install their own
+forwarders. This does, however, help if you deny the user shell access
+at the same time. See
+.BR ssh-dummy-shell (1).
+The argument must be
+.YN
+Forwarding is enabled by default.
+.ne 3
+
+.TP
+.B AllowUsers
+This keyword can be followed by any number of user name patterns or
+user@host patterns, separated by commas. Host name is handled as a
+pattern, so the rules below apply. Host name can also be a pure DNS
+name or the IP address. If you want to match only the numerical
+IP-address, prefix pattern with "\\i" (see
+.BR AllowHosts ).
+If specified, login is allowed as users whose name matches one of the
+patterns. Patterns are matched using the egrep syntax (see
+sshregex(1)), or the syntax specified by ``\fImetaconfig\fR''. You can
+use the comma \',\' character in the patterns by escaping it with '\\'
+(backslash).  By default, all users are allowed to log in.
+
+Note that all the other login authentication steps must still be
+successfully completed.  \fBAllowUsers\fR and \fBDenyUsers\fR are
+additional restrictions.
+.ne 3
+
+.TP
+\fBAllowX11Forwarding\fR or \fBX11Forwarding\fR or \fBForwardX11\fR
+Specifies whether X11 forwarding is permitted. The default is
+"\fByes\fR". Note that disabling X11 forwarding does not improve
+security in any way, as users can always install their own
+forwarders. The argument must be
+.YN
+.ne 3
+
+.TP 
+.B AuthorizationFile
+Specifies the name of the user's authorization file.
+.ne 3
+
+.TP 
+.B BannerMessageFile
+Specifies the path to the message that is sent to the client before
+authentication. Note, however, that the client is not obliged to show
+this message. The default is \fI/etc/ssh2/ssh_banner_message\fR.
+.ne 3
+
+.TP
+.B CheckMail
+Specifies if
+.B sshd
+should print information whether there is new mail or not when a user
+logs in interactively.  (On some systems this information is also printed
+by the shell, /etc/profile, or equivalent.)  The argument must be
+.YN
+The default is "\fByes\fR".
+.ne 3
+
+.TP
+.B ChRootGroups
+Specifies whether
+.B sshd
+should give the user who belongs to the defined group a chrooted
+environment. This keeps the user who belongs to this group in a "jail"
+where they can only move around in their home directory and
+lower. This is not a default option, but it can be added, and the
+groups are defined on the server in /etc/group. More than one group
+can be listed, and the groups must be separated by a comma.
+Otherwise, this option follows the logic of
+.BR DenyGroups .
+.ne 3
+
+.TP
+.B ChRootUsers
+Specifies whether
+.B sshd
+should give the user a chrooted environment. This keeps the user in 
+a "jail" where they can only move around in their home directory and
+lower. This is not a default option, but it can be added, and the
+users are defined on the server in /etc/passwd. More than one user
+can be listed, and the users must be separated by a comma.
+Otherwise, this option follows the logic of
+.BR DenyUsers .
+.ne 3
+
+.TP
+.B Ciphers
+Specifies the ciphers to use for encrypting the
+session. Currently, 
+.\" XXX Could this be made dist-dependent ?
+.IR aes ,
+.IR blowfish , 
+.IR twofish ,
+.IR arcfour ,
+.IR cast ,
+.IR 3des ,
+and
+.IR des
+are supported. Multiple ciphers can be specified 
+as a comma-separated list. Special values to this option are
+.IR any ,
+.IR anystd 
+that allows only standard (see below) ciphers (and '\fInone\fR'), and
+.IR anycipher
+that allows either any available cipher or excludes nonencrypting
+cipher mode
+.IR none
+but allows all others.
+.IR anystdcipher
+is the same as \fIanycipher\fR above, but includes only those ciphers
+mentioned in the IETF-SecSH-draft (excluding '\fInone\fR').
+.ne 3
+
+.TP
+.B DenyGroups
+This keyword can be followed by any number of group name patterns,
+separated by commas. If specified, login is denied if one of the
+groups the user belongs to matches one of the patterns. Otherwise,
+this option is parsed and matched identically with
+.BR AllowGroups .
+By default, all users are allowed to
+log in.
+
+If a user's group matches with both a pattern in
+.B DenyGroups
+and one in 
+.BR AllowGroups ,
+login will be denied.
+
+Note that the all other login authentication steps must still be
+successfully completed.  \fBAllowGroups\fR and \fBDenyGroups\fR are
+additional restrictions.
+.ne 3
+
+.TP
+.B DenyHosts
+This keyword can be followed by any number of host name patterns,
+separated by commas.  If specified, login is disallowed from hosts
+whose names match any of the patterns. See
+.BR AllowHosts .
+.ne 3
+
+.TP
+.B DenySHosts
+This keyword can be followed by any number of host name patterns,
+separated by commas. If specified, .shosts (and .rhosts,
+/etc/hosts.equiv and /etc/shosts.equiv) entries whose name matches any
+of the patterns will be ignored. See
+.BR AllowSHosts .
+.ne 3
+
+.TP
+.B DenyTcpForwardingForGroups
+The syntax is the same as in \fBDenyGroups\fR, but instead of login, 
+this controls the ability to forward ports, in remote or local
+forwarding. Note that disabling TCP forwarding does not improve
+security in any way, as users can always install their own
+forwarders. This does, however, help if you deny the user shell access
+at the same time. See
+.BR ssh-dummy-shell (1).
+The argument must be
+.YN
+Forwarding is enabled by default.
+.ne 3
+
+.TP
+.B DenyTcpForwardingForUsers
+The syntax is the same as in \fBDenyUsers\fR, but instead of login, 
+this controls the ability to forward ports, in remote or local
+forwarding. Note that disabling TCP forwarding does not improve
+security in any way, as users can always install their own
+forwarders. This does, however, help if you deny the user shell access
+at the same time. See
+.BR ssh-dummy-shell (1).
+The argument must be
+.YN
+Forwarding is enabled by default.
+.ne 3
+
+.TP
+.B DenyUsers
+This keyword can be followed by any number of user name patterns or
+user@host patterns, separated by commas. If specified, login is
+disallowed as users whose name matches one of the patterns. Otherwise,
+this option is parsed and matched identically with
+.BR AllowUsers .
+
+If a user's name matches with both a pattern in
+.B DenyUsers
+and one in
+.BR AllowUsers ,
+login is denied.
+
+Note that the all other login authentication steps must still be
+successfully completed.  \fBAllowUsers\fR and \fBDenyUsers\fR are
+additional restrictions.
+.ne 3
+
+.TP
+.B ForcePTTYAllocation
+.\" What does the server do with this?
+Force tty allocation, i.e., allocate a tty even if a command is
+given. The argument must be
+.YN
+(not yet implemented)
+.ne 3
+
+.TP
+.B ForwardAgent
+See \fBAllowAgentForwarding\fR.
+.ne 3
+
+.TP
+.B HostbasedAuthForceClientHostnameDNSMatch
+If the host name given by the client does not match the one found in DNS, 
+fail host-based authentication. (defaults to "\fBno\fR". Note that this 
+differs from 2.4 and earlier releases.)
+.ne 3
+
+.TP
+.B HostKeyFile
+Specifies the file containing the private host key (default
+.IR /etc/ssh2/hostkey ).
+.ne 3
+
+.TP
+.B IdleTimeOut
+Sets the idle timeout limit to time in seconds (s or nothing after
+number), in minutes (m), in hours (h), in days (d), or in weeks (w).
+If the connection has been idle (all channels) for that long time,
+the connection is closed down.
+.ne 3
+
+.TP
+.B IdentityFile
+Specifies the file containing the identity user public key (default
+.IR identification ).
+.ne 3
+
+.TP
+.B IgnoreRhosts
+Specifies that the
+.I rhosts
+and
+.I shosts
+files will not be used in
+"\fBhostbased\fR" authentication (see
+.BR AllowedAuthentications ).
+.I /etc/hosts.equiv
+and
+.I /etc/shosts.equiv 
+are still used (if "\fBhostbased\fR" authentication is used). The
+argument must be
+.YN
+The default is "\fBno\fR".
+.ne 3
+
+.TP 
+.B IgnoreRootRhosts
+Specifies that the
+.I rhosts 
+and 
+.I shosts 
+files will not be used in authentication for root. The default is the
+value of 
+.B IgnoreRhosts\fR.
+
+.TP
+.B KeepAlive
+Specifies whether the system should send keepalive messages to
+the other side. If they are sent, death of the connection or
+crash of one of the machines will be properly noticed. However,
+this means that connections will die if the route is down
+temporarily, and some people find it annoying. On the other hand,
+if keepalives are not sent, sessions may hang indefinitely on the
+server, leaving "ghost" users and consuming server resources.
+
+The default is "\fByes\fR" (to send keepalives), and the server
+will notice if the network goes down or the client host reboots.
+This avoids infinitely hanging sessions.
+
+To disable keepalives, the value should be set to "\fBno\fR" in
+both the server and the client configuration files.
+.ne 3
+
+.TP
+.B ListenAddress
+Specifies the IP address of the interface where the
+.B sshd2 
+server socket is bound.
+.ne 3
+
+.TP
+.B LoginGraceTime
+The server disconnects after this time if the user has not
+successfully logged in.  If the value is 0, there is no time limit.
+The default is 600 (seconds).
+.ne 3
+
+.TP
+.B MACs
+Specifies the MAC (Message Authentication Code) algorithm to use for
+data integrity verification. Currently,
+.\" XXX Could this be made dist-dependent ?
+.IR hmac-sha1 ,
+.IR hmac-sha1-96 ,
+.IR hmac-md5 , 
+.IR hmac-md5-96 ,
+.I hmac-ripemd160
+and
+.I hmac-ripemd160-96
+are supported, of which
+.IR hmac-sha1 ,
+.IR hmac-sha1-96 ,
+.I hmac-md5 
+and
+.I hmac-md5-96
+are included in all distributions. Multiple MACs can be specified 
+as a comma-separated list.  Special values to this option are
+.IR any ,
+.IR anystd ,
+that allows only standard (see below) MACs (and '\fInone\fR'), and
+.IR anymac
+that allows either any available MAC or excludes
+.IR none
+but allows all others.
+.IR anystdmac
+is the same as \fIanymac\fR above, but includes only those MACs
+mentioned in the IETF-SecSH-draft (excluding '\fBnone\fR').
+.ne 3
+
+.TP
+.B MaxBroadcastsPerSecond
+Specifies how many UDP broadcasts server handles per second. The default
+value is 0 and no broadcasts are handled at all. Broadcasts that
+exceed the limit are silently ignored. Received unrecognized UDP
+datagrams also consume the capacity defined by this option.
+.ne 3
+
+.TP
+.B MaxConnections
+Specifies the maximum number of connections
+.B sshd2
+will handle simultaneously. This is useful in systems where spamming
+.B sshd2
+with new connections can cause the system to become unstable or
+crash. The argument is a positive number. 0 means that number of
+connections is unlimited (by
+.BR sshd2 ).
+
+Note that by using (at least) xinetd you achieve the same effect.
+.ne 3
+
+.TP
+.B NoDelay
+If "\fByes\fR", enable socket option TCP_NODELAY. The argument must be
+.YN
+Default is "\fBno\fR".
+.ne 3
+
+.TP
+.B PasswordGuesses
+Specifies the number of tries that the user has when using
+password authentication. The default is 3. Then, shalt thou 
+count to three. No more. No less.
+.ne 3
+
+.TP
+.B PermitEmptyPasswords
+When password authentication is allowed, it specifies whether the
+server allows login to accounts with empty password strings. The
+argument must be
+.YN (not yet implemented)
+.ne 3
+
+.TP
+.B PermitRootLogin
+Specifies whether the root can log in using
+.BR ssh2 .
+May be set to "\fByes\fR", "\fBnopwd\fR", or "\fBno\fR".  The default
+is "\fByes\fR", allowing root logins through any of the authentication
+types allowed for other users.  The "\fBnopwd\fR" value disables
+password-authenticated root logins.  The "\fBno\fR" value disables
+root logins through any of the authentication methods. ("\fBnopwd\fR"
+and "\fBno\fR" are equivalent unless you have a .rhosts or .shosts in
+the root home directory and you have not set up public key
+authentication for root.)
+
+Root login with public key authentication when the "\fBcommand\fR"
+option has been specified will be allowed regardless of the value of
+this setting (which may be useful for taking remote backups even if
+root login is normally not allowed).
+.ne 3
+
+.TP
+.B Port
+Specifies the port number that
+.B sshd2
+listens on.  The current default is 22.
+.ne 3
+
+.TP
+.B PrintMotd
+Specifies whether
+.B sshd2
+should print 
+.I /etc/motd
+when a user logs in interactively. The default is "\fByes\fR".  The
+argument must be
+.YN
+.ne 3
+
+.TP
+.B PublicHostKeyFile
+Specifies the file containing the public host key (default
+.IR /etc/ssh2/hostkey.pub ).
+Note: In most cases, the order of configuration parameters is not an
+issue. Here, it is safe if you specify HostKeyFile first before
+this parameter.
+.ne 3
+
+.TP
+.B RandomSeedFile
+Specifies the name of the random seed file.
+.ne 3
+
+.TP
+.B RekeyIntervalSeconds
+Specifies the interval in seconds at which the key exchange will be done again.
+The default is 3600 seconds (1 hour). A value of '0' turns rekey requests
+off. This does not prevent the client from requesting rekeys. Other
+clients (not
+.BR ssh2 )
+may not have rekey capabilities implemented correctly, and
+they might not like rekey requests. This means that they may possibly close
+the connection or even crash.
+.ne 3
+
+.TP
+.B RequiredAuthentications
+Related to
+.BR AllowedAuthentications ,
+this is used to specify what authentication methods the users
+.I must
+complete before continuing. If this value is left empty, it does not 
+mean that no authentications are required. It means that the client can
+authenticate itself with any of the authentications given in 
+.BR AllowedAuthentications .
+This parameter has no default. 
+.B Note:
+This parameter has to be a subset of 
+.BR AllowedAuthentications .
+Otherwise, the server denies connection every time.
+.ne 3
+
+.TP
+.B RequireReverseMapping
+This is used to check whether hostname DNS lookup
+.I must
+succeed when checking whether connections from host are allowed using
+.B AllowHosts
+and
+.BR DenyHosts .
+If this is set to
+.BR yes ,
+then if name lookup fails, the connection is denied. If set to
+.BR no ,
+if name lookup fails, the remote host's IP address is used to check
+whether it is allowed to connect. This is probably not what you want
+if you have specified only host names (not IP addresses) with
+.BR {Allow,Deny}Hosts .
+The default is "\fBno\fR". The argument must be
+.YN
+.ne 3
+
+.TP
+.B Subsystem-<subsystem name>
+Specifies a subsystem. The argument is a command which will be
+executed when the subsystem is requested.
+
+Sftp uses a subsystem of sshd2 to transfer files securely. In order
+to use the sftp server, you must have the following subsystem definition:
+
+subsystem-sftp		sftp-server
+.ne 3
+
+.TP
+.B QuietMode
+Specifies whether the system runs in quiet mode.  In quiet mode,
+nothing is logged in the system log, except fatal errors.  The
+argument must be
+.YN
+.ne 3
+
+.TP
+.B Ssh1Compatibility
+Specifies whether to use SSH1 compatibility code. With this option,
+.B sshd1
+is executed when the client supports only SSH 1.x protocols. The argument
+must be
+.YN
+.ne 3
+
+.TP
+.B Sshd1ConfigFile
+Specifies alternate config file to specify for
+.B sshd1\fR,
+when it is executed by
+.B sshd2
+in compatibility mode. Note: this is only used, if 
+.B sshd2
+is executed with the "\fB-f\fR" argument.
+.ne 3
+
+.TP
+.B Sshd1Path
+Specifies the path to 
+.B sshd1 
+daemon which will be executed if the
+client supports only SSH 1.x protocols. The arguments for 
+.B sshd2 
+are passed on to 
+.BR sshd1 .
+.ne 3
+
+.TP
+.B SshPAMClientPath
+Specifies the path to 
+.BR ssh-pam-client ,
+which is used as a helper application to converse with the
+.B PAM
+modules by
+.BR sshd2 .
+.ne 3
+
+.TP
+.B StrictModes
+Specifies whether 
+.B sshd2 
+should check file modes and ownership of the user's home directory and
+rhosts files before accepting login. This is normally desirable because
+novices sometimes accidentally leave their directory or files
+world-writable. The argument must be
+.YN 
+The default is "\fByes\fR". (not yet implemented)
+.ne 3
+
+.TP
+.B SyslogFacility
+Gives the facility code that is used when logging messages from
+.B sshd2.
+The possible values are: DAEMON, USER, AUTH, LOCAL0, LOCAL1, LOCAL2,
+LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7.  The default is AUTH.
+.ne 3
+
+.TP
+.B UserConfigDirectory
+Specifies where user-specific configuration data should be fetched
+from. With this the administration can control whatever configuration
+parameters they wish that are normally the users' domain. This is
+given as a pattern string which is expanded by sshd2. %D is the
+user's home directory, %U is user's login name, %IU is the user's user
+ID (uid) and %IG is his group ID (gid). The default is 
+.IR %D/.ssh2 .
+
+.TP
+.B UserKnownHosts
+Specifies whether the user's \&$HOME/\s+2.\s0ssh2/knownhosts/ directory 
+can be used to fetch host public keys when
+using "\fBhostbased\fR" authentication.
+The argument must be
+.YN
+The default is "\fByes\fR".
+.ne 3
+
+.TP
+.B VerboseMode
+Verbose mode.  Causes 
+.B sshd2 
+to print debugging messages about its progress. This is helpful in
+debugging connection, authentication, and configuration problems. Also
+causes
+.B sshd2
+to not fork on connection, so only one connection is handled.
+.ne 3
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR sshd2 (8),
+.BR sshd-check-conf (5)

@@ -1,0 +1,347 @@
+.\"  -*- nroff -*-
+.\"
+.\" sshd2.8
+.\"
+.\" Author:     Tatu Ylonen <ylo@ssh.com>
+.\"             Markku-Juhani Saarinen <mjos@ssh.com>
+.\"		Sami Lehtinen <sjl@ssh.com>
+.\"
+.\" Copyright (C) 1997,1998,1999,2000 SSH Communications Security, Finland
+.\" All rights reserved
+.\"
+.TH SSHD2 8 "May 23, 2000" "SSH2" "SSH2"
+
+.SH NAME
+sshd2 \- secure shell daemon 
+
+.SH SYNOPSIS
+.na
+.B sshd2
+[\c
+.BI \-d \ debug_level_spec\fR\c
+]
+[\c
+.BI \-f \ config_file\fR\c
+]
+[\c
+.BI \-h \ host_key_file\fR\c
+]
+[\c
+.BI \-o \ options\fR\c
+]
+[\c
+.BI \-p \ port\fR\c
+]
+[\c
+.BI \-v \c
+]
+[\c
+.BI \-g \ login_grace_time\fR\c
+]
+[\c
+.BI \-i \c
+]
+[\c
+.BI \-q \c
+]
+.ad
+
+
+.SH DESCRIPTION 
+.LP
+.B Sshd2 
+(Secure Shell Daemon) is the daemon program for 
+.BR ssh2 .
+Together, these programs replace the rlogin and rsh programs, and
+provide secure encrypted communications between two untrusted hosts
+over an insecure network.  The programs are intended to be as easy to
+install and use as possible.
+.LP
+.B Sshd2 
+is normally started at boot from 
+.I /etc/rc.local
+or equivalent.  It forks a new
+daemon for each incoming connection.  The forked daemons handle
+key exchange, encryption, authentication, command execution,
+and data exchange.
+.LP
+.B Sshd2 
+can be configured using command-line options or a configuration
+file.  Command-line options override values specified in the
+configuration file.
+.LP
+.SH OPTIONS
+.TP
+.BI \-d \ debug_level_spec
+Debug mode.  The server sends verbose debug output to stderr.
+This option is only intended for debugging for the server.  The
+debugging level is either a number, or a comma-separated list of
+assignments "ModulePattern=debug_level".
+.ne 3
+.TP
+.BI \-f \ configuration_file
+Specifies the name of the configuration file.  The default is
+.IR /etc/ssh2/sshd2_config .
+NOTE: If this is specified, the default configuration file is not read
+.B at all\fR.
+.ne 3
+.TP
+.BI \-h \ host_key_file
+Specifies the file from which the host key is read (default
+.IR /etc/ssh2/hostkey).  
+If sshd2 is not run as root, the default host key file will be
+.IR $HOME$/.ssh2/hostkey.
+.ne 3
+.TP
+.BI \-o \ 'option'
+Can be used to give options in the format used in the configuration
+files.  This is useful for specifying options for which there is no
+separate command-line flag.  The option has the same format as a line
+in the configuration file.  Comment lines are not currently
+accepted. (Egrep regex format is used with these options (where
+applicable))
+.ne 3
+.TP
+.BI \-p \ port
+Specifies the port on which the server listens for connections. 
+The default port is 22.
+.ne 3
+.TP
+.BI \-v
+Enable verbose mode. Display verbose debugging messages. Equal to
+`-d 2'. This option can also be specified in the configuration file.
+.ne 3
+.TP
+.BI \-q
+Quiet mode.  Nothing is sent to the system log.  Normally the
+beginning, authentication, and termination of each connection is
+logged. This option can also be specified in the configuration
+file. 
+.ne 3
+.TP
+.BI \-g \ login_grace_time
+Gives the grace time for clients to authenticate themselves (the default
+is 600 seconds).  If the client fails to authenticate the user within
+this many seconds, the server disconnects and exits.  A value of zero
+indicates no limit.
+.ne 3
+.TP
+.BI \-i
+Specifies that sshd is being run from inetd.
+.ne 3
+.TP
+
+.SH CONFIGURATION FILE
+
+.B Sshd2
+reads configuration data from 
+.I /etc/ssh2/sshd2_config
+(or the file specified with -f on the command line).  The file
+contains keyword-value pairs, one per line.  Lines starting with \'#\'
+and empty lines are interpreted as comments.
+
+For the format of \fIsshd2_config\fR, see
+.BR sshd2_config (5).
+
+.\" .SH SUBSYSTEMS
+.\" XXX
+.SH LOGIN PROCESS
+
+When a user successfully logs in,
+.B sshd2
+does the following:
+.IP 1.
+Changes to run with normal user privileges.
+.IP 2.
+Sets up basic environment.
+.IP 3.
+Reads /etc/environment if it exists.
+.IP 4.
+Changes to the user's home directory.
+.IP 5.
+Runs the user's shell or command.
+.RT
+
+.SH SSH WITH TCP WRAPPERS
+
+When 
+.B sshd2
+is compiled with TCP wrappers libraries, then the
+hosts.allow/deny files also control who can connect to ports forwarded
+by 
+.BR sshd2 .
+
+The program names in the hosts.allow/deny files are
+.B sshd2
+or
+.B sshd
+(depending on how you execute 
+.BR sshd2 ),
+.B sshdfwd-\c
+.I <portname>\c
+,
+.B sshdfwd-\c
+.I <portnumber>\c
+, and
+.B sshdfwd-X11
+for forwarded ports the ssh client or server is listening.
+.LP
+If the port has a defined name, you must use it. 
+
+.SH FILES
+.TP
+.I /etc/ssh2/sshd2_config
+Contains configuration data for
+.BR sshd2 .  
+This file should be writable by root only, but it is recommended
+(though not necessary) that it be world-readable.
+.TP
+.I /etc/ssh2/hostkey
+Contains the private part of the host key.  This file is normally
+created automatically by "make install", but can also be created
+manually using
+.BR ssh-keygen2 (1).
+This file should only be owned by root, readable only by root, and not
+accessible to others.
+.TP
+.I /etc/ssh2/hostkey.pub
+Contains the public part of the host key.  This file is normally
+created automatically by "make install", but can also be created
+manually.  This file should be world-readable but writable only by
+root.  Its contents should match the private part.  
+.TP
+.I /etc/ssh2/random_seed
+This file contains a seed for the random number generator.  This file
+should only be accessible by root.
+.TP
+.I \&$HOME/\s+2.\s0ssh2/authorization
+contains information on how the server will verify the identity of
+an user. See 
+.BR ssh2 (1)
+for more information.
+.TP
+.I \&$HOME/\s+2.\s0hushlogin
+If this file exists, 
+.B sshd2 
+will not print information during login. (This is normally user's last
+login time, message of the day and mailcheck.)
+
+.TP
+.I /etc/nologin
+If this file exists, 
+.B sshd2
+refuses to let anyone except root log in.  The contents of the file
+are displayed to anyone trying to log in, and non-root connections are
+refused.  The file should be world-readable.
+
+.TP
+.I \&$HOME/\s+2.\s0rhosts
+This file contains host-username pairs, separated by a space, one per
+line.  The given user on the corresponding host is permitted to log in
+without password.  The same file is used by rlogind and rshd.
+.B sshd2 
+differs from rlogind and rshd in that it requires public host key
+authentication in addition to validating the host name retrieved from
+domain name servers. The file must be writable only by the user; it
+is recommended that it not be accessible by others.
+
+It is also possible to use netgroups in the file.  Either host or user
+name may be of the form +@groupname to specify all hosts or all users
+in the group.
+.TP
+.I \&$HOME/\s+2.\s0shosts
+For
+.B ssh2,
+this file is exactly the same as for \s+2.\s0rhosts.  However, this file is
+not used by rlogin and rshd, so using this permits access using
+.B ssh2
+only.
+.TP
+.I /etc/hosts.equiv
+This file is used during \s+2.\s0rhosts authentication.  In its
+simplest form, this file contains host names, one per line.  Users on
+those hosts are permitted to log in without a password, provided they
+have the same user name on both machines.  The host name may also be
+followed by a user name; such users are permitted to log in as
+.B any
+user on this machine (except root).  Additionally, the syntax +@group
+can be used to specify netgroups.  Negated entries start with \'-\'.
+
+If the client host/user is successfully matched in this file, login is
+automatically permitted provided the client and server user names are the
+same.  Additionally, successful host-based authentication is normally
+required.  This file must be writable only by root; it is recommended
+that it be world-readable.
+
+\fBWarning: It is almost never a good idea to use user names in 
+hosts.equiv.\fR
+Beware that it really means that the named user(s) can log in as
+\fBanybody\fR,
+including bin, daemon, adm, and other accounts that own critical
+binaries and directories.  Using a user name practically grants the
+user root access.  The only valid use for user names should be 
+in negative entries.
+\fBNote that this warning also applies to rsh/rlogin.\fR
+.TP
+.I /etc/shosts.equiv
+This is processed exactly as
+.I /etc/hosts.equiv.
+However, this file may be useful in environments that want to run both
+rsh/rlogin and
+.B ssh2.
+
+.TP
+.I \&$HOME/\s+2.\s0ssh2/knownhosts/xxxxyyyy.pub
+These are the public host keys of hosts that a user wants to log in from
+using "\fBhostbased\fR"-authentication (equivalent with ssh1's
+\fBRhostsRSAAuthentication\fR). Also, a user has to set up her/his
+\fI$HOME/.shosts\fR (which only ssh uses) or \fI$HOME/.rhosts\fR file
+(insecure, as it is used by the r*-commands also). If username is the
+same in both hosts, it is adequate to put the public host key to
+\fI/etc/ssh2/knownhosts\fR and add the host's name to
+\fI/etc/shosts.equiv\fR (or \fI/etc/hosts.equiv\fR).
+
+xxxx denotes the host name (FQDN) and yyyy denotes the public key
+algorithm of the key.
+
+For example, zappa.foo.fi's host key algorithm is ssh-dss. The hostkey
+would be named "\fIzappa.foo.fi.ssh-dss.pub\fR" in the
+knownhosts directory.
+
+Possible names for public key algorithms are "\fBssh-dss\fR" and
+"\fBssh-rsa\fR" (without the quotes).
+
+.TP
+.I /etc/ssh2/knownhosts/xxxxyyyy.pub
+As above, but system-wide. These can be overridden by the user by
+putting a file with the same name to her/his
+\fI$HOME/.ssh2/knownhosts\fR directory.
+
+
+.SH INSTALLATION
+.LP
+.B Sshd2 
+is normally run as root.  If it is not run as root, it can
+only log in as the user it is running as, and password authentication
+may not work if the system uses shadow passwords.  An alternative
+host key file must also be used.
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR sshd2_config (5),
+.BR ssh2 (1),
+.BR ssh-keygen2 (1),
+.BR ssh-agent2 (1),
+.BR ssh-add2 (1),
+.BR scp2 (1),
+.BR sftp (1)
+.BR rlogin (1),
+.BR rsh (1),
+.BR telnet (1)
+

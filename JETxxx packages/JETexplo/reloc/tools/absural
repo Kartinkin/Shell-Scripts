@@ -1,0 +1,97 @@
+#!/bin/ksh -p
+# Version	0.0
+# Date		3 Nov 2001
+# Author	Kirill Kartinkin
+
+# Location	/opt/SUNWexplo/tools
+# Permissions	root:bin 0555
+
+################################################################################
+
+# Explorer Version:
+EXP_VERSION=3.6
+
+# Define EXP_ETC variable
+EXP_ETC="/etc/opt/SUNWexplo"
+
+# Source tools functions
+. ${EXP_LIB}/exp_tools
+script=$(basename $0)
+
+# Run if specified to do so
+which_gate_exit $script default all
+
+require "grep ABS_ ${EXP_ETC}/default/abs >/dev/null" "ABS Ural not installed"
+
+################################################################################
+# Параметры:
+#	$1 - вывод команды env
+#	$2 - переменная
+# Возвращаемое значение
+function GetVar
+{
+	print "$1" | nawk -F= -v Var=$2 '$1==Var { print ; exit }'
+}
+
+################################################################################
+################################################################################
+
+. ${EXP_ETC}/default/abs
+
+get_file ${EXP_ETC}/default/abs absural
+
+for i in CONTROL PROCESSING
+do
+	eval 'File=${ABS_'$i'_ENVFILE}'
+	eval 'User=${ABS_'$i'_USER}'
+	if [[ -z ${User} || ! -f ${File} ]]
+	then
+		continue
+	fi
+	Shell=$(nawk -v User=${User} -F: '$1==User  { if ( $NF=="" )  { print "/bin/sh" ; exit } else { print $NF ; exit } }' /etc/passwd )
+	if [[ ${Shell##*/} == "csh" ]]
+	then
+		Source="source"
+	else
+		Source="."
+	fi
+
+	get_file ${File} absural/$i/
+
+	get_cmd "${Shell} -c \"${Source} ${File}; env\"" user=${User} absural/$i/env
+	get_cmd "${Shell} -c \"${Source} ${File}; java -version\"" user=${User} absural/$i/java-version
+	get_cmd "${Shell} -c \"${Source} ${File}; java -cp ${CLASSPATH} com/informix/jdbc/Version\"" user=${User} absural/$i/java-jdbc-version
+
+	export INFORMIXDIR=$(awk -F= '$1=="INFORMIXDIR" { print $2 ; exit }' ${EXP_TARGET}/absural/$i/env.out)
+	if [[ -z ${INFORMIXDIR} ]]
+	then
+		continue
+	fi
+	export ONCONFIG=$(awk -F= '$1=="ONCONFIG" { print $2 ; exit }' ${EXP_TARGET}/absural/$i/env.out)
+	if [[ -z ${ONCONFIG} ]]
+	then
+		ONCONFIG=onconfig
+	fi
+	get_file ${INFORMIXDIR}/etc/${ONCONFIG} informix/$i/
+	get_file $(awk '$1=="MSGPATH" { print $2 }' ${INFORMIXDIR}/etc/${ONCONFIG}) informix/$i/
+	get_file $(awk '$1=="ALARMPROGRAM" { print $2 }' ${INFORMIXDIR}/etc/${ONCONFIG}) informix/$i/
+	get_file $(awk '$1=="SYSALARMPROGRAM" { print $2 }' ${INFORMIXDIR}/etc/${ONCONFIG}) informix/$i/
+
+	${INFORMIXDIR}/bin/onstat - >/dev/null 2>&1
+	if (( $? != 255 ))
+	then
+		continue
+	fi
+
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -a\"" user=${User} informix/$i/onstat-a
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -p\"" user=${User} informix/$i/onstat-p
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -d\"" user=${User} informix/$i/onstat-d
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -D\"" user=${User} informix/$i/onstat-D
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -R\"" user=${User} informix/$i/onstat-R
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -l\"" user=${User} informix/$i/onstat-l
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -g sts\"" user=${User} informix/$i/onstat-sts
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -g mgm\"" user=${User} informix/$i/onstat-mgm
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -g seg\"" user=${User} informix/$i/onstat-seg
+	get_cmd "${Shell} -c \"${Source} ${File}; ${INFORMIXDIR}/bin/onstat -g iov\"" user=${User} informix/$i/onstat-iov
+done
+

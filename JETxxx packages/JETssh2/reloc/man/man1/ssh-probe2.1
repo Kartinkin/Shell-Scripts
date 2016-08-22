@@ -1,0 +1,75 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh-probe2.1
+.\"
+.\" Author:     Timo J. Rinne <tri@ssh.com>
+.\"
+.\" Copyright (c) 1999 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SSH-PROBE2 1 "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+ssh-probe2 \- seeks ssh servers from the local network
+
+.SH SYNOPSIS
+.B ssh-probe2
+[\c
+.B \-t timeout\c
+]
+[\c
+.B \-r\c
+]
+[\c
+.B \-s\c
+]
+[\c
+.B addresses\c
+\&.\|.\|.\|]
+
+.SH DESCRIPTION 
+.LP
+.B ssh-probe2
+sends an ssh server query packet as a UDP datagram to the given broadcast
+addresses.  Servers that allow UDP queries respond to the query and 
+.B ssh-probe2
+prints the addresses and version numbers of these servers.
+
+.SH OPTIONS
+.TP 0.5i
+.B \-t timeout
+Timeout in seconds. This is how long the program waits for server 
+replies before exit.
+.TP 0.5i
+.B \-r
+Makes the output of the program more readable than the
+raw list format suitable for scripts.
+.TP 0.5i
+.B \-s
+Inhibits output. The success of the command can only be concluded
+from the exit value.  In this mode option
+.B \-r
+has no effect.
+.SH RETURN STATUS
+
+.B ssh-probe2
+returns one of the following exit statuses. This may be useful in scripts.
+.IP 0
+The broadcast was sent, and at least one reply was received.
+.IP 1
+The broadcast was sent, but no replies were received.
+.IP -1
+An unspecified error has occurred. This is a catch-all for errors not
+listed above.
+.RT
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR sshd2 (8)
+

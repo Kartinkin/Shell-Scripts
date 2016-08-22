@@ -1,0 +1,4 @@
+This is ssh-dummy-shell.  Edit $(ETCDIR)/ssh2/ssh_dummy_shell.out
+in order to alter this message.
+
+Press any key to exit.

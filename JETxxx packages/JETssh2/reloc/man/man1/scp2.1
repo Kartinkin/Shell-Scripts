@@ -1,0 +1,271 @@
+.\"  -*- nroff -*-
+.\"
+.\" scp2.1
+.\"
+.\" Author:     Timo J. Rinne <tri@ssh.com>
+.\"		Sami Lehtinen <sjl@ssh.com>
+.\"
+.\" Copyright (c) 1998,1999,2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SCP2 1  "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+scp2 \- secure copy client
+
+.SH SYNOPSIS
+.na
+.B scp2
+[\c
+.BI \-D \ debug_level_spec\fR\c
+]
+[\c
+.B \-d \c
+]
+[\c
+.B \-p \c
+]
+[\c
+.B \-u \c
+]
+[\c
+.B \-v \c
+]
+[\c
+.B \-h \c
+]
+[\c
+.B \-c \ cipher \fR\c
+]
+[\c
+.BI \-S \ ssh2-path\fR\c
+]
+[\c
+.BI \-P \ ssh2-port\fR\c
+]
+[\c
+.B \-t \c
+]
+[\c
+.B \-f \c
+]
+[\c
+.B \-1 \c
+]
+[\c
+.B \-r \c
+]
+[\c
+.B \-B \c
+]
+[\c
+.BI \-b \ buffer_size\fR\c
+]
+[\c
+.BI \-N \ max_requests\fR\c
+]
+[\c
+.BI \-o \ ssh-option\fR\c
+]
+[\c
+.BI \-i \ file\fR\c
+]
+[[user@]host[#port]:]file ... [[user@]host[#port]:]file_or_dir
+
+.ad
+
+.SH DESCRIPTION 
+.LP
+.B Scp2
+(Secure Copy) is used to copy files over the network securely.
+It uses
+.B ssh2
+for data transfer and authentication, and provides
+the same level of security as
+.B ssh2 .
+Unlike
+.BR rcp ,
+.B scp2
+will ask for passwords or passphrases if they are needed for
+authentication. You can also use your public key for authentication.
+See
+.BR ssh-agent2 (1)
+and 
+.BR ssh-add2 (1).
+
+
+.LP
+Any filename may contain a host, user and port specification to
+indicate that the file is to be copied to/from that host.  Copies
+between two remote hosts are permitted.  ``host'' parameter can
+optionally be enclosed in square brackets ([]) to allow the use of
+semicolons (read: IPv6 addresses).  ``file'' can contain globbing
+patterns (type \fIzsh_fileglob\fR). All special characters can be
+escaped to include them in ``file'', but this means that if you want
+to use escapes so that they will be used in the glob pattern (to
+escape special characters), you have to escape them ('\\\\'). Read
+more about \fIzsh_fileglob\fR from
+.BR sshregex (1).
+
+.SH OPTIONS
+.LP
+.ne 3
+.TP
+.BI \-D \ debug_level_spec\fR\c
+Print extensive debug information to stderr. debug_level_spec is
+a number between 0 and 99, where 99 specifies that all debug
+information should be displayed.
+.ne 3
+.TP
+.B \-d \c
+With this option,
+.B scp2
+will make sure that the destination file is a directory. If not,
+.B scp2
+will exit with an error message.
+.ne 3
+.TP
+.B \-p \c
+Tells
+.B scp2
+to preserve file attributes and timestamps.
+.ne 3
+.TP
+.B \-u \c
+Makes
+.B scp2
+remove source-files after copying. This makes scp2 work more like 
+"mv" than "cp."
+.ne 3
+.TP
+.B \-v \c
+Makes
+.B scp2
+verbose. This is equal to specifying the`-D 2'-option.
+.ne 3
+.TP
+.B \-h \c
+Display a short help.
+.ne 3
+.TP
+.BI \-c \ cipher\fR\c
+Select the encryption algorithm that 
+.B ssh2
+will use. Multiple -c options are allowed.
+A single -c flag can have only one cipher. 
+.ne 3
+.TP
+.BI \-S \ ssh2-path\fR\c
+Specifies the path to
+.B ssh2
+used in connecting.
+.ne 3
+.TP
+.BI \-o \ ssh-options\fR\c
+Specifies options to give to
+.BR ssh2 .
+Use as with
+.BR ssh2,
+see
+.BR ssh2 (1).
+.ne 3
+.TP
+.BI \-i \ file\fR\c
+Specifies the identity file to give to 
+.BR ssh2 .
+.ne 3
+.TP
+.BI \-P \ ssh2-port\fR\c
+Specifies the remote port to
+.B ssh2 .
+Ports can also be defined on a file-to-file basis. See 
+.B SYNOPSIS .
+.ne 3
+.TP
+.B \-t \fRor\fB \-f \c
+These options are reserved for
+.B scp1
+compatibility mode. If they are used with
+.B scp2\fR,
+it gives them as arguments to
+.B scp1
+to handle the connection.
+.ne 3
+
+.TP
+.B \-1\c
+This option invokes
+.B scp1
+with the given arguments. The
+.B ``-1''
+is removed from the list, however, because scp1 does not understand
+this option. Because of this, this option has to be given as the
+first argument to
+.B scp2
+and separated from other arguments.
+.ne 3
+
+.TP
+.B \-r\c
+This option specifies that 
+.B scp2
+should copy directories recursively. Does not follow symbolic links.
+
+.TP
+.B \-B\c
+With this option, 
+.B scp2
+invokes, if need be,
+.B ssh2
+with "\fBBatchMode yes\fR".
+
+.TP
+.BI \-b \ buffer_size\fR\c
+Define the maximum buffer size for one request (default 32768 bytes).
+.ne 3
+
+.TP
+.BI \-N \ max_requests\fR\c
+Define the maximum number of concurrent requests (default 10).
+.ne 3
+
+.SH EXAMPLES
+.LP
+There are a couple of ways to use scp2. You can use it to 
+copy files from your local system to a remote system:
+.TP
+$ scp localfile user@remotehost:/dest/dir/for/file/
+.PP
+Or you can use it to copy files from a remote system locally:       
+.TP
+$ scp user@remotehost:/dir/for/file/remotefile /dest/dir/for/file
+
+.SH INSTALLATION
+.LP
+.B Scp2 
+uses 
+.B ssh2
+in network connections.  Therefore it is not installed suid-root.
+Notice that subsystem `sftp-server' must be defined in 
+.BR sshd2 (8)'s
+configuration file in the remote end for 
+.B scp2 
+to work.
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh2 (1),
+.BR sshd2 (8),
+.BR ssh-keygen2 (1),
+.BR ssh-agent2 (1),
+.BR ssh-add2 (1),
+.BR sftp (1)
+.BR rlogin (1),
+.BR rsh (1),
+.BR telnet (1)

@@ -1,0 +1,603 @@
+.\"  -*- nroff -*-
+.\"
+.\" sshregex.1
+.\"
+.\" Author: Sami Lehtinen <sjl@ssh.com>
+.\" 
+.\" Based on Antti Huima's REGEX-SYNTAX document.
+.\"
+.\" Copyright (c) 2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SSHREGEX 1  "May 23, 2001" "SSH2" "SSH2"
+
+.SH DESCRIPTION 
+.LP
+This document describes the regular expressions (or globbing patterns) 
+used in filename globbing with
+.B scp2
+and
+.B sftp2
+and in the configuration files 
+.I ssh2_config 
+and 
+.I sshd2_config \fR.
+
+Regex syntax used with
+.B scp2
+and 
+.B sftp2
+is ZSH_FILEGLOB.
+
+.SH REGEX SYNTAX: EGREP
+.SH PATTERNS
+
+The escape character is a backslash '\\'. With this you can escape meta 
+characters which you would like to use in their plain character form.
+
+In the following examples literal `E' and `F' denote any expression,
+be it a pattern or a character.
+.ne 3
+.TP
+.B (
+Start a capturing subexpression.
+.ne 3
+.TP
+.B )
+End a capturing subexpression.
+.ne 3
+.TP
+.B E|F
+Disjunction, match either E or F (inclusive). 
+E is preferred if both match.
+.ne 3
+.TP
+.B E*
+Act as Kleene star, match E zero or more times.
+.ne 3
+.TP
+.B E+
+Closure, match E one or more times.
+.ne 3
+.TP
+.B E?
+Option, match E optionally once.
+.ne 3
+.TP
+.B .
+Match any character except for newline characters (\\n, \\f, \\r) and and
+the NUL byte.
+.ne 3
+.TP
+.B E{n}
+Match E exactly n times.
+.ne 3
+.TP
+.B E{n,} or E{n,0}
+Match E n or more times.
+.ne 3
+.TP
+.B E{,n} or E{0,n}
+Match E at most n times.
+.ne 3
+.TP
+.B E{n,m}
+Match E no less than n times and no more than m times.
+.ne 3
+.TP
+.B [
+Start a character set, see Section \fBCHARACTER SETS FOR EGREP AND
+ZSH_FILEGLOB\fR.
+.ne 3
+.TP
+.B $
+Match the empty string at the end of the input or at the end of a
+line.
+.ne 3
+.TP
+.B ^
+Match the empty string at the start of the input or at the beginning
+of a line.
+
+.SH ESCAPED TOKENS FOR REGEX SYNTAX EGREP
+.ne 3
+.TP
+.B \\\\0n..n
+The literal byte with octal value n..n .
+.ne 3
+.TP
+.B \\\\0
+The NUL byte.
+.ne 3
+.TP
+.B \\\\[1-9]..x
+The literal byte with decimal value [1-9]..x .
+.ne 3
+.TP
+.B \\\\xn..n or \\\\0xn..n
+The literal byte with hexadecimal value n..n .
+.ne 3
+.TP
+.B \\\\<
+Match the empty string at the beginning of a word.
+.ne 3
+.TP
+.B \\\\>
+Match the empty string at the end of a word.
+.ne 3
+.TP
+.B \\\\b
+Match the empty string at a word boundary.
+.ne 3
+.TP
+.B \\\\B
+Match the empty string provided it is not at a word boundary.
+.ne 3
+.TP
+.B \\\\w
+Match a word-constituent character, equivalent to [a:zA:Z0:9-].
+.ne 3
+.TP
+.B \\\\W
+Match a non-word-constituent character.
+.ne 3
+.TP
+.B \\\\a
+Literal alarm character.
+.ne 3
+.TP
+.B \\\\e
+Literal escape character.
+.ne 3
+.TP
+.B \\\\f
+Literal line feed.
+.ne 3
+.TP
+.B \\\\n
+Literal new line, equivalent to C's \\n so can be more than one
+character long.
+.ne 3
+.TP
+.B \\\\r
+Literal carriage return.
+.ne 3
+.TP
+.B \\\\t
+Literal tab.
+
+All other escaped characters denote the literal character itself.
+
+.SH REGEX SYNTAX: ZSH_FILEGLOB (or TRADITIONAL)
+.SH PATTERNS
+
+.ne 3
+The escape character is a backslash '\\'. With this you can escape meta 
+characters which you would like to use in their plain character form.
+
+In the following examples literal `E' and `F' denote any expression,
+be it a pattern or a character.
+.TP
+.B *
+Match any string consisting of zero or more characters. The characters
+can be any characters apart from slashes (/). However, the asterisk
+does not match a string if the string contains a dot (.) as its first
+character, or if the string contains a dot immediately after a
+slash. This means that the asterisk cannot be used to match filenames
+that have a dot as their first character.
+
+if the previous 
+character is a slash (/), or the asterisk (*) is used to denote a match 
+at the beginning of a string, it does match a dot (.).
+
+That is, the `*' functions as is normal in UNIX shell fileglobs.
+.ne 3
+.TP
+.B ?
+Match any single character except for a slash (/). However, do not match
+a dot (.) if located at the beginning of the string, or if the previous 
+character is a slash (/).
+
+That is, `?' functions as is normal in UNIX shell fileglobs (at least
+ZSH, although discarding the dot may not be a standard procedure).
+.ne 3
+.TP
+.B **/
+match any sequence of characters that is either empty, or ends in a
+slash. However, the substring `/.' is not allowed. This mimics
+ZSH's **/ construct. (Please note that `**' is equivalent to `*'.)
+.ne 3
+.TP
+.B E#
+Act as Kleene star, match E zero or more times.
+.ne 3
+.TP
+.B E##
+Closure, match E one or more times.
+.ne 3
+.TP
+.B (
+Start a capturing subexpression.
+.ne 3
+.TP
+.B )
+End a capturing subexpression.
+.ne 3
+.TP
+.B E|F
+Disjunction, match either E or F (inclusive). 
+E is preferred if both match.
+.ne 3
+.TP
+.B [
+Start a character set. (see below)
+.ne 3
+
+.SH CHARACTER SETS FOR EGREP AND ZSH_FILEGLOB
+.LP
+.ne 3
+A character set starts with ``\fB[\fR'' and ends at non-escaped
+``\fB]\fR'' that is not part of a POSIX character set specifier and
+that does not follow immediately after ``\fB[\fR''.
+
+The following characters have a special meaning and need to be escaped
+if meant literally:
+
+.ne 3
+.TP
+.B - (minus sign) 
+A range operator, except immediately after ``\fB[\fR'', where it loses
+its special meaning.
+.ne 3
+.TP
+.B ^ or ! (latter applies to ZSH_FILEGLOB)
+If immediately after the starting ``\fB[\fR'', denotes a complement: the
+whole character set will be complemented. Otherwise literal.
+``\fB^\fR''.
+.ne 3
+.TP
+.B [:alnum:]
+Characters for which `isalnum' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:alpha:]
+Characters for which `isalpha' returns true (see ctype.h). 
+.ne 3
+.TP
+.B [:cntrl:]
+Characters for which `iscntrl' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:digit:]
+Characters for which `isdigit' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:graph:]
+Characters for which `isgraph' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:lower:]
+Characters for which `islower' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:print:]
+Characters for which `isprint' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:punct:]
+Characters for which `ispunct' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:space:]
+Characters for which `isspace' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:upper:]
+Characters for which `isupper' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:xdigit:]
+Characters for which `isxdigit' returns true (see ctype.h).
+
+.ne 3
+.TP
+.B EXAMPLE
+.B  [[:xdigit:]XY]
+is typically equivalent to 
+.B [0123456789ABCDEFabcdefXY] .
+
+.SH REGEX SYNTAX: SSH
+.SH PATTERNS
+
+The escape character is a tilde '~'. With this you can escape meta 
+characters which you would like to use in their plain character form.
+
+\fBNOTE\fR: In configuration the backslash '\\' is used to escape the
+list separator (',').
+
+In the following examples literal `E' and `F' denote any expression,
+be it a pattern or character.
+.ne 3
+.TP
+.B (
+Start a capturing subexpression.
+.ne 3
+.TP
+.B )
+End a capturing subexpression.
+.ne 3
+.TP
+.B {
+Start anonymous, non-capturing subexpression.
+.ne 3
+.TP
+.B }
+End anonymous, non-capturing subexpression.
+.ne 3
+.TP
+.B E|F
+Disjunction, match either E or F (inclusive). 
+E is preferred if both match.
+.ne 3
+.TP
+.B E*
+Act as Kleene star, match E zero or more times.
+.ne 3
+.TP
+.B E*?
+Act as Kleene star, but match non-greedily (lazy match).
+.ne 3
+.TP
+.B E+
+Closure, match E one or more times.
+.ne 3
+.TP
+.B E+?
+Closure, but match non-greedily (lazy match).
+.ne 3
+.TP
+.B E?
+Option, match E optionally once.
+.ne 3
+.TP
+.B E??
+Option, but match non-greedily (lazy match).
+.ne 3
+.TP
+.B .
+Match ANY character, including possibly the NUL byte and the newline
+characters.
+.ne 3
+.TP
+.B E/n/
+Match E exactly n times.
+.ne 3
+.TP
+.B E/n,/ or E/n,0/
+Match E n or more times.
+.ne 3
+.TP
+.B E/,n/ or E/0,n/
+Match E at most n times.
+.ne 3
+.TP
+.B E/n,m/
+Match E no less than n times and no more than m times.
+.ne 3
+.TP
+.B E/n,/? , E/n,0/? , E/,n/? , E/0,n/? , E/n,m/?
+The lazy versions of above.
+.ne 3
+.TP
+.B [
+Start a character set. (see section \fBCHARACTER SETS FOR REGEX SYNTAX
+SSH\fR)
+.ne 3
+.TP
+.B >C 
+One-character lookahead. `C' must be either a literal character or
+parse as a character set. Match the empty string anywhere provided
+that the next character is `C' or belongs to it.
+.ne 3
+.TP
+.B <C 
+One-character lookback. As above, but examine the previous character
+instead of the next character.
+.ne 3
+.TP
+.B $
+Match the empty string at the end of the input.
+.ne 3
+.TP
+.B ^
+Match the empty string at the start of the input.
+
+.SH ESCAPED TOKENS FOR REGEX SYNTAX SSH
+.ne 3
+.TP
+.B ~0n..n
+The literal byte with octal value n..n .
+.ne 3
+.TP
+.B ~0
+The NUL byte.
+.ne 3
+.TP
+.B ~[1-9]..x
+The literal byte with decimal value [1-9]..x .
+.ne 3
+.TP
+.B ~xn..n or ~0xn..n
+The literal byte with hexadecimal value n..n .
+.ne 3
+.TP
+.B ~<
+Match the empty string at the beginning of a word.
+.ne 3
+.TP
+.B ~>
+Match the empty string at the end of a word.
+.ne 3
+.TP
+.B ~b
+Match the empty string at a word boundary.
+.ne 3
+.TP
+.B ~B
+Match the empty string provided it is not at a word boundary.
+.ne 3
+.TP
+.B ~d
+Match any digit, equivalent to [0:9].
+.ne 3
+.TP
+.B ~D
+Match any character except a digit.
+.ne 3
+.TP
+.B ~s
+Match a whitespace character (matches space, newline, line feed,
+carriage return, tab and vertical tab).
+.ne 3
+.TP
+.B ~S
+Match a non-whitespace character.
+.ne 3
+.TP
+.B ~w
+Match a word-constituent character, equivalent to [a:zA:Z0:9-].
+.ne 3
+.TP
+.B ~W
+Match a non-word-constituent character.
+.ne 3
+.TP
+.B ~a
+Literal alarm character.
+.ne 3
+.TP
+.B ~e
+Literal escape character.
+.ne 3
+.TP
+.B ~f
+Literal line feed.
+.ne 3
+.TP
+.B ~n
+Literal new line, equivalent to C's \\n so can be more than one
+character long.
+.ne 3
+.TP
+.B ~r
+Literal carriage return.
+.ne 3
+.TP
+.B ~t
+Literal tab.
+
+All other escaped characters denote the literal character itself.
+
+.SH CHARACTER SETS FOR REGEX SYNTAX SSH
+.LP
+.ne 3
+A character set starts with ``\fB[\fR'' and ends at non-escaped
+``\fB]\fR'' that is not part of a POSIX character set specifier and
+that does not follow immediately after ``\fB[\fR''.
+
+The following characters have a special meaning and need to be escaped
+if meant literally:
+
+.ne 3
+.TP
+.B :
+A range operator, except immediately after ``\fB[\fR'', where it loses
+its special meaning.
+.ne 3
+.TP
+.B - (minus sign)
+Until next +, the characters, ranges and sets will
+be subtracted from the current set instead of
+adding.  If appears as the first character after ``\fB[\fR'',
+start subtracting from a set containing all
+characters instead of the empty set.
+.ne 3
+.TP
+.B + 
+Until next -, the characters, ranges and sets will be added to the
+current set. This is the default.
+.ne 3
+.TP
+.B [:alnum:]
+Characters for which `isalnum' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:alpha:]
+Characters for which `isalpha' returns true (see ctype.h). 
+.ne 3
+.TP
+.B [:cntrl:]
+Characters for which `iscntrl' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:digit:]
+Characters for which `isdigit' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:graph:]
+Characters for which `isgraph' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:lower:]
+Characters for which `islower' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:print:]
+Characters for which `isprint' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:punct:]
+Characters for which `ispunct' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:space:]
+Characters for which `isspace' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:upper:]
+Characters for which `isupper' returns true (see ctype.h).
+.ne 3
+.TP
+.B [:xdigit:]
+Characters for which `isxdigit' returns true (see ctype.h).
+
+It is also possible to include the predefined escaped character sets
+into a newly defined one, so
+
+    [~d~s]
+
+matches digits and whitespace characters.
+
+Also, escape sequences resulting in literals work inside character
+sets.
+
+.ne 3
+.TP
+.B EXAMPLE
+.B  [[:xdigit:]-a:e]
+is typically equivalent to 
+.B [0123456789ABCDEFf] .
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh2_config (5),
+.BR sshd2_config (5),
+.BR scp2 (1),
+.BR sftp2 (1)
+

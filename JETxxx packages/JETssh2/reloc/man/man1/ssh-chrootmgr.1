@@ -1,0 +1,129 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh-chrootmgr.1
+.\"
+.\" Author: Sami Lehtinen <sjl@ssh.com>
+.\"
+.\" Copyright (C) 2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SSH-CHROOTMGR 1 "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+ssh-chrootmgr \- sets up chroot-ready environment for users
+
+.SH SYNOPSIS
+.B ssh-chrootmgr
+[\c
+.BI \-h|-?|--help \c
+]
+[\c
+.BI \-q \c
+]
+[\c
+.BI \-v \c
+]
+[\c
+.BI \-n \c
+]
+.I login_name ...
+
+.SH DESCRIPTION 
+.LP
+This script is a helper application to be used in instances where you
+would like to use
+.B ChRootUsers
+or
+.B ChRootGroups
+with
+.B sshd
+and
+.BR sftp-server .
+  With
+.B ChRoot{Users,Groups}
+you can restrict a user to her own home directory (and therefore
+make it much less likely that the user could steal any information
+from the filesystem). This requires, however, that you have static
+builds (ie. ones that don't use shared libraries) of
+.B ssh-dummy-shell
+and
+.B sftp-server
+available. How to accomplish this depends largely on the system, but
+the 
+.B configure
+script does its best to automatically guess what compiler flags to
+use.
+
+This script is used to simplify the copying of these binaries to a
+standard place.
+
+.B ssh-chrootmgr
+tries to dig the user's home directory from
+.I /etc/passwd
+by the supplied username(s) (you can supply more than one username, in
+which case all these accounts are processed). It then creates a
+.I bin
+directory (if it doesn't already exist) under the user's home 
+directory. It then copies the static versions of 
+.B ssh-dummy-shell
+and
+.B sftp-server2
+to this directory, and makes a symbolic link
+.B sftp-server
+in that directory to point to the
+.B sftp-server2
+binary.
+
+After you've run this script, you should add the desired users (or
+groups) to
+.BR ChRootUsers \ (\fBChRootGroups\fR)
+in
+.IR sshd2_config .
+You should also change the user(s) shell to
+.I /bin/ssh-dummy-shell
+in
+.IR /etc/passwd .
+(After the chroot operation, the \fI/bin\fR directory is the \fIbin\fR
+directory in the user's home directory, in the user's perspective.)
+
+.SH OPTIONS
+.TP
+.BI \-v 
+Puts 
+.B ssh-chrootmgr
+to verbose mode.
+.ne 3
+
+.TP
+.BI \-q
+Puts 
+.B ssh-chrootmgr
+to quiet mode (only errors are reported).
+.ne 3
+
+.TP
+.BI \-n
+Specifies, that
+.B ssh-chrootmgr
+should only show what \fIwould\fR happen, but doesn't actually do any
+copies etc. Particularly useful with
+.BI \-v .
+.ne 3
+
+.TP
+.B \-h \fRor\fB \-? \fRor\fB --help 
+Shows short help.
+.ne 3
+
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh2 (1),
+.BR sshd2 (8),
+.BR sshd2_config (5)

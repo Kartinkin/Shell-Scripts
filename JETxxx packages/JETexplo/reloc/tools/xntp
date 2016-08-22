@@ -1,0 +1,13 @@
+#!/bin/ksh -p
+
+# Explorer Version:
+EXP_VERSION=3.6
+
+# Source tools functions
+. ${EXP_LIB}/exp_tools
+
+# Run if specified to do so
+script=`basename $0`
+which_gate_exit $script default all
+
+get_file "/etc/inet/ntp.conf"      etc/inet/

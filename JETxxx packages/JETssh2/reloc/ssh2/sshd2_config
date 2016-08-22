@@ -1,0 +1,156 @@
+## SSH CONFIGURATION FILE FORMAT VERSION 1.1
+## REGEX-SYNTAX egrep
+## end of metaconfig
+## (leave above lines intact!)
+## sshd2_config
+## SSH 3.0 Server Configuration File
+##
+
+## General
+
+#	VerboseMode			no
+#	QuietMode			yes
+#	ForcePTTYAllocation		no
+#	SyslogFacility			AUTH
+#	SyslogFacility			LOCAL7
+
+## Network
+
+# Port is not commented out, as it is needed by the example startup
+# scripts. Well, the default won't likely change.
+	Port 				22
+#	ListenAddress			any
+#	RequireReverseMapping		no
+#	MaxBroadcastsPerSecond		0
+#	MaxBroadcastsPerSecond		1  
+#	NoDelay				yes
+#	KeepAlive			yes
+#	MaxConnections			50
+#	MaxConnections			0 
+# 0 == number of connections not limited 
+
+
+## Crypto
+
+#	Ciphers				AnyCipher
+# Following includes "none" 'cipher': 
+#	Ciphers				AnyStd
+#
+#	Ciphers				AnyStdCipher
+#	Ciphers				3des
+# Following includes "none" 'mac':
+#	MACs				AnyMAC
+#
+#	MACs				AnyStd
+#	MACs				AnyStdMAC
+#	RekeyIntervalSeconds		3600
+
+
+## User
+
+#	PrintMotd			yes
+#	CheckMail			yes
+#	UserConfigDirectory		"%D/.ssh2"
+#	UserConfigDirectory		"/etc/ssh2/auth/%U"
+#	UserKnownHosts			yes
+#	LoginGraceTime			600
+#	PermitEmptyPasswords		no
+#	StrictModes			yes
+#	IdleTimeOut                     1h
+
+## User public key authentication
+
+#	HostKeyFile			hostkey
+#	PublicHostKeyFile		hostkey.pub
+#	RandomSeedFile			random_seed
+#	IdentityFile			identification
+#	AuthorizationFile		authorization
+#	AllowAgentForwarding		yes
+
+
+## Tunneling
+
+#	AllowX11Forwarding		yes
+#	AllowTcpForwarding		yes
+#	AllowTcpForwardingForUsers	sjl, cowboyneal@slashdot\.org
+#	DenyTcpForwardingForUsers	2[[:isdigit:]]*4,peelo
+#	AllowTcpForwardingForGroups	priviliged_tcp_forwarders
+#	DenyTcpForwardingForGroups	coming_from_outside
+
+
+## Authentication
+## Hostbased and PAM are not enabled by default.
+
+#	BannerMessageFile	        /etc/ssh2/ssh_banner_message
+#	BannerMessageFile               /etc/issue.net
+#	PasswordGuesses			3
+#	AllowedAuthentications		hostbased,publickey,password
+#	AllowedAuthentications		publickey,pam-1@ssh.com
+#	AllowedAuthentications		publickey,password
+#	RequiredAuthentications		publickey,password
+#	HostbasedAuthForceClientHostnameDNSMatch no
+#	SshPAMClientPath		ssh-pam-client
+
+## Host restrictions
+
+#	AllowHosts			localhost, foobar.com, friendly.org
+#
+## Next one matches with, for example, taulu.foobar.com, tuoli.com, but
+## not tuoli1.com. Note that you have to input string "\." when you want it
+## to match only a literal dot. You also have to escape "," when you
+## want to use it in the pattern, because otherwise it is considered a list
+## separator.
+## 
+##     AllowHosts		t..l.\..*
+##
+## The following matches any numerical IP-address (yes, it is cumbersome)
+##
+##     AllowHosts		([[:digit:]]{1\,3}\.){3}[[:digit:]]{1\,3}
+##
+## Same thing is achieved with using the special prefix "\i" in a
+## pattern. This means that the pattern is only used to match
+## IP-addresses.
+##
+## Using the above example:
+##
+##     AllowHosts		\i.*
+##
+## You can probably see the difference between the two.
+##
+#	DenyHosts			evil\.org, aol\.com
+#	AllowSHosts			trusted\.host\.org
+#	DenySHosts			not\.quite\.trusted\.org
+#	IgnoreRhosts			no
+#	IgnoreRootRHosts		no
+# (the above, if not set, is defaulted to the value of IgnoreRHosts)
+
+
+## User restrictions
+
+#	AllowUsers			sj.*,s[[:isdigit:]]*,s(jl|amza)
+#	DenyUsers			skuuppa,warezdude,31373
+#	DenyUsers			don@untrusted\.org
+#	AllowGroups			staff,users
+#	DenyGroups			guest
+#	PermitRootLogin			nopwd
+#	PermitRootLogin			yes
+
+## SSH1 compatibility
+
+#	Ssh1Compatibility		<set by	configure by default>
+#	Sshd1Path			<set by	configure by default>
+#
+# This is given as argument to sshd1 with "-f" if sshd2 is invoked
+# with "-f"
+#	Sshd1ConfigFile			/etc/sshd_config_alternate
+
+## Chrooted environment
+
+#	ChRootUsers			ftp,guest
+#	ChRootGroups			guest
+
+
+## subsystem definitions
+
+# Subsystem's don't have defaults, so this is needed here (uncommented).
+	subsystem-sftp                  sftp-server

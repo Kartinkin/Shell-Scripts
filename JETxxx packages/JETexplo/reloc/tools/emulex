@@ -1,0 +1,50 @@
+#!/bin/ksh
+#
+# Emulex HBA
+# Ilya Voronin <ivoronin@jet.msk.su>, 2005
+# 
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only.
+# See the http://www.opensolaris.org/license/ for details.
+#
+# @(#)emulex	1.2 07/27/05
+#
+
+# Explorer Version:
+EXP_VERSION=5.1
+
+# Source Common Functions
+. ${EXP_LIB}/exp_tools
+
+# Run if specified to do so
+script=${0##*/}
+which_gate_exit storage default all $script
+
+# Explorer output directories
+EXP_EMULEX_OUTPUT_DIR="disks/emulex/"
+HBACMD="/usr/sbin/hbanyware/hbacmd"
+
+# Check for installed HBAnyware package
+pkginfo -q HBAnyware
+TEXT=`gettext "HBAnyware not installed"`
+require "test ${?} -ne 0" "${TEXT}"
+
+get_cmd "${HBACMD} ListHBAs" ${EXP_EMULEX_OUTPUT_DIR}
+get_cmd "${HBACMD} VERSION" ${EXP_EMULEX_OUTPUT_DIR}
+
+PWWNS=`${HBACMD} ListHBAs | grep '^Port WWN' | awk '{ print $4 }'`
+
+for PWWN in ${PWWNS}; do
+	get_cmd "${HBACMD} HBAAttrib ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} PortAttrib ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} PortStat ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} ServerAttrib ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} TargetMapping ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} PersistentBinding ${PWWN} C" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} PersistentBinding ${PWWN} L" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} AllNodeInfo ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} BindingCapabilities ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} BindingSupport ${PWWN} C" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} BindingSupport ${PWWN} L" ${EXP_EMULEX_OUTPUT_DIR}
+	get_cmd "${HBACMD} DriverParams ${PWWN}" ${EXP_EMULEX_OUTPUT_DIR}
+done

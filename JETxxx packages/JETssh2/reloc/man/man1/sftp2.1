@@ -1,0 +1,417 @@
+.\"  -*- nroff -*-
+.\"
+.\" sftp2.1
+.\"
+.\" Author:     Tomi Salo <ttsalo@ssh.com>
+.\"
+.\" Copyright (c) 2000 SSH Communications Security Corp, Finland
+.\" All rights reserved
+.\"
+.TH SFTP2 1 "March 22, 2000" "SSH2" "SSH2"
+
+.SH NAME
+sftp2 \- secure ftp client
+
+.SH SYNOPSIS
+.LP
+.na
+.B sftp2
+[\c
+.BI \-D \ debug_level_spec\fR\c
+]
+[\c
+.BI \-B \ batchfile\fR\c
+]
+[\c
+.BI \-S \ path\fR\c
+]
+[\c
+.B \-h\fR\c
+]
+[\c
+.BI \-P \ port\fR\c
+]
+[\c
+.BI \-b \ buffer_size\fR\c
+]
+[\c
+.BI \-N \ max_requests\fR\c
+]
+[\c
+.B \-V\fR\c
+]
+[\c
+.BI \-c \ cipher\fR\c
+]
+[\c
+.BI \-m \ MAC\fR\c
+]
+[\c 
+user@]host[\c
+#port]
+
+.SH DESCRIPTION 
+.LP
+.B Sftp
+(Secure File Transfer) is a ftp-like client that can be used for
+file transfer over the network.  Sftp uses 
+.B ssh2
+in data connections, so the file transport is secure. Even though 
+.B sftp 
+functions like 
+.BR ftp ,
+it does not use the FTP daemon (
+.B ftpd 
+or 
+.BR wu-ftpd )
+for connections.
+   
+In order to connect using 
+.BR sftp ,
+you need to make sure that
+.B sshd2 
+is running on the remote machine you are connecting to.
+.B Sftp 
+uses a "subsystem" of 
+.B sshd2 
+to transfer files securely.
+
+.SH OPTIONS
+.LP
+.ne 3
+.TP
+.BI "-D" " debug_level_spec"
+Debug mode.  Makes
+.B sftp
+send verbose debug output to stderr. The debugging level is
+either a number (0-99), or a comma-separated list of assignments
+.IR ModulePattern = debug_level .
+.I ModulePattern
+is
+.B Sftp2
+for the main
+.B sftp2
+application.
+.ne 3
+.TP
+.BI "-B" " batchfile"
+Batch mode. Reads commands from a file instead of standard input.
+Since this mode is intended for scripts/cronjobs,
+.B sftp2
+will not try to interact with user, which means that only the
+passwordless authentication methods will work.  In batch mode, a
+failure to change the current working directory will cause the
+.B sftp2
+to abort. Other errors are ignored.
+.TP
+.BI "-S" " path"
+Specifies the path to the
+.B ssh2
+binary.
+.TP
+.B "-h"
+Prints the usage and exits.
+.TP
+.BI "-P" " port"
+Port to connect to on the remote host. This option can also be specified
+in the configuration file.
+.TP
+.BI "-b" " buffer_size"
+Define the maximum buffer size for one request (default 32768 bytes).
+.TP
+.BI "-N" " max_requests"
+Define the maximum number of concurrent requests (default 10).
+.TP
+.B "-V"
+Prints the version and exits.
+.TP
+.BI "-c" " cipher"
+Select the encryption algorithm. Multiple -c options are allowed
+and a single -c flag can have only one cipher. This option can also
+be specified in the configuration file. You can use blowfish, twofish,
+cast, arcfour, des, and 3des.
+.TP
+.BI "-m" " MAC"
+Select the MAC (Message Authentication Code) algorithm. Multiple
+-m options are allowed and a single -m flag can have only one MAC.
+This option can also be specified in the configuration file.
+.TP
+.BI \ user\fR\c
+Specify the username to use when connecting. (Optional)
+.TP
+.BI \ host\fR\c
+Specify the host to connect to.
+.TP
+.BI \ port\fR\c
+Specify the port on the host to connect to. (Optional)
+
+.SH COMMANDS
+.LP
+When the 
+.B sftp2
+is ready to accept commands, it will display a prompt:
+.BR "'sftp> '" "."
+The user can then enter any of the following commands. 
+.TP
+.BI "open " "hostname"
+Tries to connect to a host specified in
+.IR hostname .
+.TP
+.B localopen
+Opens a local connection (the connection is created without connecting
+to an
+.B sshd2
+daemon). This is intended for debugging and testing.
+.TP
+.B close
+Closes the current session.
+.TP
+.B quit
+Quits the application.
+.TP
+.BI "cd " directory
+Changes the current remote working directory. 
+.TP
+.BI "lcd " directory
+Changes the current local working directory. 
+.TP
+.B pwd
+Prints the name of the current remote working directory.
+.TP
+.B lpwd
+Prints the name of the current local working directory.
+.TP
+.B ls\fR [ \fB-R\fR ] [ \fB-l\fR ] [ \fIfile\fR ... ]
+Lists the names of the files on the remote server. For directories,
+the contents of the directory are listed. When the \fB-R\fR option is 
+specified, the directory trees are listed recursively. 
+(By default, the subdirectories of the argument directories are not 
+visited.) When the \fB-l\fR option is specified, 
+permissions, owners, sizes and modification times are also shown. 
+When no arguments are given, it is assumed that the contents of \fB.\fR 
+are being listed.  Currently the options \fB-R\fR and \fB-l\fR are mutually 
+incompatible.
+.TP
+.B lls\fR [ \fB-R\fR ] [ \fB-l\fR ] [ \fIfile\fR ... ]
+Same as \fBls\fR, but operates on local files.
+.TP
+.B get \fR[ \fIfile\fR ... ]
+Transfers the specified files from the remote end to the local
+end. Directories are recursively copied with their contents.
+.TP
+.B mget \fR[ \fIfile\fR ... ]
+Synonymous to \fBget\fR.
+.TP
+.B put \fR[ \fIfile\fR ... ]
+Transfers the specified files from the local end to the remote
+end. Directories are recursively copied with their contents.
+.TP
+.B mput \fR[ \fIfile\fR ... ]
+Synonymous to \fBput\fR.
+.TP
+.B "rename" \fIsource\fR \fItarget\fR
+Renames the file \fIsource\fR to \fItarget\fR.
+.TP
+.B "lrename" \fIsource\fR \fItarget\fR
+Same as \fBrename\fR, but operates on local files.
+.TP
+.BI "rm " file
+Tries to delete the file specified in \fIfile\fR.
+.TP
+.BI "lrm " file
+Same as \fBrm\fR, but operates on local files.
+.TP
+.BI "mkdir " directory
+Tries to create the directory specified in \fIdirectory\fR.
+.TP
+.BI "lmkdir " directory
+Same as \fBmkdir\fR, but operates on local files.
+.TP
+.BI "rmdir " directory
+Tries to delete the directory specified in \fIdirectory\fR.
+.TP
+.BI "lrmdir " directory
+Same as \fBrmdir\fR, but operates on local files.
+.TP
+.B help\fR [ \fItopic\fR ]
+If \fItopic\fR is not given, lists the available topics. 
+If \fItopic\fR is given, outputs the available online help on the 
+topic.
+
+.SH COMMAND INTERPRETATION
+.LP
+.B sftp2
+understands both backslashes and quotation marks on the command line.
+A backslash can be used for ignoring the special meaning of any
+character in the command line interpretation. It will be removed even
+if the character it precedes has no special meaning. 
+
+Quotation marks can be used for specifying filenames with
+spaces. 
+
+The command line processing and globbing use the same escape character
+(a backslash), so if you want to use a backslash to escape the meta-characters
+in the globbing, you have to precede the backslash with
+another backslash to escape its special meaning in the command line
+processing.
+
+Also, if you do \fIget .\fR or \fIput .\fR you will get or put
+every file in the current directory and possibly override files in
+your current directory.
+
+.SH GLOB PATTERNS
+.LP
+.B sftp2
+supports glob patterns (wildcards) given to commands \fBls\fR, \fBlls\fR,
+\fBget\fR, and \fBput\fR. The format is described in the man page
+.BR sshregex (1).
+
+.SH COMMAND LINE EDITING
+.LP
+The following key sequences can be used for command line editing:
+.TP
+.B Ctrl-Space
+Set the mark.
+.TP
+.B Ctrl-A
+Go to the beginning of the line.
+.TP
+.B Ctrl-B
+Move the cursor one character to the left.
+.TP
+.B Ctrl-D
+Erase the character on the right of the cursor, or exit the program if
+the command line is empty.
+.TP
+.B Ctrl-E
+Go to the end of the line.
+.TP
+.B Ctrl-F
+Move the cursor one character to the right.
+.TP
+.B Ctrl-H
+Backspace.
+.TP
+.B Ctrl-I
+Tab.
+.TP
+.B Ctrl-J
+Enter.
+.TP
+.B Ctrl-K
+Delete to the end of the line.
+.TP
+.B Ctrl-L
+Redraw the line.
+.TP
+.B Ctrl-M
+Enter.
+.TP
+.B Ctrl-N
+Move to the next line.
+.TP
+.B Ctrl-P
+Move to the previous line.
+.TP
+.B Ctrl-T 
+Toggle two characters.
+.TP
+.B Ctrl-U
+Delete the line.
+.TP
+.B Ctrl-W
+Delete a region (the region's other end is marked with Ctrl-Space).
+.TP
+.B Ctrl-X
+Begin an extended command.
+.TP
+.B Ctrl-Y
+Yank the deleted line.
+.TP
+.B Ctrl-_
+Undo.
+.TP
+.B Ctrl-X Ctrl-L
+Downcase the region.
+.TP
+.B Ctrl-X Ctrl-U
+Upcase the region.
+.TP
+.B Ctrl-X Ctrl-X
+Exchange the cursor and the mark.
+.TP
+.B Ctrl-X H
+Mark the whole buffer.
+.TP
+.B Ctrl-X U
+Undo.
+.TP
+.B Esc Ctrl-H
+Backwards word-delete.
+.TP
+.B Esc Delete
+Backwards word-delete.
+.TP 
+.B Esc Space
+Delete extra spaces (leaves only one space).
+.TP 
+.B Esc \\
+Delete extra spaces (leaves only one space).
+.TP
+.B Esc <
+Go to the beginning of the line.
+.TP
+.B Esc >
+Go to the end of the line.
+.TP
+.B Esc @
+Mark the current word.
+.TP
+.B Esc A
+Go one sentence backwards.
+.TP
+.B Esc B
+Go one word backwards.
+.TP
+.B Esc C
+Capitalize the current word.
+.TP
+.B Esc D
+Delete the current word.
+.TP
+.B Esc E
+Go one sentence forwards.
+.TP
+.B Esc F
+Go one word forwards.
+.TP
+.B Esc K
+Delete the current sentence.
+.TP
+.B Esc L
+Lowercase the current word.
+.TP
+.B Esc T
+Transpose words.
+.TP
+.B Esc U
+Upcase the current word.
+.TP
+.B Delete
+Backspace.
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR sshregex (1),
+.BR ssh2 (1),
+.BR sshd2 (8),
+.BR ssh-keygen2 (1),
+.BR ssh-agent2 (1),
+.BR ssh-add2 (1),
+.BR scp2 (1)

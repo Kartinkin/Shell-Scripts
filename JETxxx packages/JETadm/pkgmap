@@ -1,0 +1,16 @@
+: 1 66
+1 d none /var ? ? ?
+1 d none /var/adm ? ? ?
+1 s none /var/adm/bin=../../opt/JETadm/bin
+1 d none bin 0775 root bin
+1 f none bin/ccat 0755 root bin 905 579 966010773
+1 f none bin/cfcat 0755 root bin 986 5894 965136090
+1 f none bin/clearlogs.sh 0755 root bin 8371 36153 977832958
+1 f none bin/cron.sh 0744 root bin 2861 13545 966579206
+1 f none bin/loadenv.bash 0644 root bin 760 35373 980846827
+1 f none bin/loadenv.ksh 0644 root bin 540 7395 980846794
+1 f none bin/logger.sh 0755 root bin 3433 60731 977761266
+1 f none bin/showlog.sh 0755 root bin 3980 59318 988355078
+1 f none bin/shtype 0644 root bin 1154 22228 974189921
+1 i depend 692 54503 988355928
+1 i pkginfo 354 29022 1005314180

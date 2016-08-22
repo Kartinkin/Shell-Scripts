@@ -1,0 +1,216 @@
+#!/bin/sh 
+#
+# ssh-pubkeymgr - A user public key manager for Secure Shell
+#
+# Author: Anne Carasik <anne@ssh.com> 
+#
+# Copyright (C) 2000 SSH Communications Security Corp, Helsinki, Finland
+# All rights reserved.
+#
+# It's too much of a pain to create the public key files like identification
+# and authorization. This quick little script runs ssh-keygen2, then creates
+# the identification and authorization files. Then it runs scp to the remote 
+# system to copy the public keys there.
+
+########## ChangeLog ######################################
+# 18 August 2000 - removed downloading hostkeys because you get them anyway
+# during the first connection :)
+#
+# 12 February 2001 - removed hostname -s because too many bugs were being 
+# reported from it. Also added config file checks for publickey authentication.
+# And comments. Many, many, many more comments.
+########## ChangeLog ######################################
+
+
+############################################################
+#               Some basic checks...                       #
+############################################################
+
+## Set the default keypair to id_dsa_1024_a for 
+keypair="id_dsa_1024_a"
+
+## Check for compatibility for the $LOGNAME instead of $USER
+if [ -z "$USER" ]; then
+	if [ -n "$LOGNAME" ]; then
+		USER=$LOGNAME
+	else
+		USER=`whoami`
+	fi
+fi
+
+
+############################################################
+#               Check the command line options.            #
+############################################################
+
+while [ -n "$1" ]
+do
+	case $1 in
+		-k)	keypair="$2" 
+			echo $keypair 
+			echo "Running ssh-pubkeymgr.."
+			shift 2
+			;;
+		-h)	echo " "
+			echo "SSH Secure Shell user public key manager"
+			echo "Usage: ssh-pubkeymgr [-k keypair]"
+			echo " "
+			echo "Type man ssh-pubkeymgr for more information."
+			exit 
+			;;
+		*)	echo " "
+			echo "Usage: ssh-pubkeymgr [-k keypair]"
+			echo " "
+			echo "Type man ssh-pubkeymgr for more information."
+			exit 
+	esac
+done
+
+#############################################################################
+# Checking the configuration files to make sure so publickey authentication #
+# will work. Otherwise, program will exit with the return status of 1.      #
+#############################################################################
+echo "Checking for publickey authentication to be enabled in the client config.."
+clientconfigcontains=`grep -v "^#" /etc/ssh2/ssh2_config | grep publickey`
+serverconfigcontains=`grep -v "^#" /etc/ssh2/sshd2_config | grep publickey`
+
+if [ -z "$clientconfigcontains" ] ; then
+	echo "Nothing found in /etc/ssh2/ssh2_config. Add publickey"
+	echo "authentication to AllowedAuthentications or RequiredAuthentications"
+	echo "then restart ssh-pubkeymgr."
+	exit 1
+else
+	echo "Your client configuration is all set."
+fi
+
+echo " "
+echo "Checking for publickey authentication to be enabled in the server config.."
+if [ -z "$serverconfigcontains" ] ; then
+	echo "Nothing found in /etc/ssh2/sshd2_config. Add publickey"
+	echo "authentication to AllowedAuthentications or RequiredAuthentications"
+	echo "then restart ssh-pubkeymgr."
+	exit 1
+else
+	echo "Your client configuration is all set."
+fi
+echo " "
+
+
+#############################################################################
+# Checking DSA public keys. Currently, there is no support for PGP or RSA   #
+# public keys; however that will change.                                    #
+#############################################################################
+echo "Checking for existing user public keys.."
+
+## Check for the user's DSA keypair
+if [ -s "$HOME/.ssh2/$keypair" -a "$HOME/.ssh2/$keypair.pub" ] ; then
+	echo "You have public and private keys.. Skipping ssh-keygen2.."
+	echo " "
+else
+	echo "Couldn't find your DSA keypair.. I'll generate you a new set.."
+	echo "Running ssh-keygen2... don't forget to give it a passphrase!"
+	echo " "
+	ssh-keygen2
+fi
+
+
+#############################################################################
+# Setup the identification file. This is so when you login, the client      #
+# recognizes which private key you're using.                                #
+#############################################################################
+echo "If you are logging in from this computer, you need to have an 
+echo "identification file that defines what private keys will be recognized 
+echo "when you login. By default, this should be $keypair."
+echo " "
+
+## Check for $HOME/.ssh2/identification
+if [ -s "$HOME/.ssh2/identification" ] ; then
+	echo "You already have an identity file.. Skipping.."
+	echo " "
+else
+	echo "Creating your identity file.."
+	echo " "
+	echo IdKey $keypair > $HOME/.ssh2/identification
+fi
+
+
+#############################################################################
+# Setup the authorization file. This is so when you login, the server       #
+# recognizes your public key.                                               #
+#############################################################################
+## Check for $HOME/.ssh2/authorization
+if [ -s "$HOME/.ssh2/authorization" ] ; then
+	echo " "
+else
+	echo "Creating your authorization file.."
+	echo " "
+	touch "$HOME/.ssh2/authorization"
+fi
+
+## Ask the user for the hostname of which remote hosts to add.
+echo "The next section allows you to add hosts that you wish to login from using"
+echo "public key authentication."
+echo " "
+echo -n "Do you want to add any hosts to your authorization file? (Default: yes)"
+while read addhosts
+do
+	case "$addhosts" in
+		"" | [yY] | [yY][eE][sS])
+       	        	echo " "
+                	echo "Type in their hostname, press return after"
+                	echo "each one. "
+			echo " "
+			echo "Add which user?"
+				read user
+			echo "Add which host?"
+				read host
+				echo Key $user-$host.pub >> $HOME/.ssh2/authorization
+			echo "You added "$user" at "$host" as a trusted login."
+			echo "Press return to continue or Ctrl-D to exit."
+			;;		
+		[nN] | [nN][oO])
+			echo "Skipping editing the authorization file.." 
+			break 
+	esac	
+done
+
+echo
+echo "All the new files are in your $HOME/.ssh2 directory."
+echo 
+
+###########################################################################
+# Send your public key to remote servers so you can login to them.        #
+# Don't forget that you need to add this key to the ~/.ssh2/authorization #
+# file on the remote server.                                              #
+###########################################################################
+echo "Now that you have your public keypair generated, you can copy your public"
+echo "key up to remote hosts so you can login to them using public key" 
+echo "authentication. You also need to add this key," $USER"@"$HOSTNAME".pub," 
+echo "to the ~/.ssh2/authorization file on the server."
+echo " "
+echo -n "Do you want to upload " $USER"@"$HOSTNAME" key to a remote host? (Default: yes)"
+while read uploadhost
+do
+	case "$uploadhost" in
+ 		"" | [yY] | [yY][eE][sS])
+			echo "Upload to which host?"
+				read host
+			echo "Which user account?"
+				read user
+			echo "Where is the " $user"'s home directory? "
+			echo "(e.g. /home/anne, /u/ahc, etc.)"
+				read homedir
+			# Run scp2 to copy the file
+			echo "Now running scp2 to connect to "$host".."
+			echo "Most likely you'll have to type a password :)"
+ 			scp2 "$HOME/.ssh2/$USER-$HOSTNAME.pub" $user@$host:$homedir/.ssh2/
+			echo " " 
+			echo "Press return to upload to more hosts or Ctrl-D to exit." ;;		
+ 		[nN] | [nN][oO])
+ 			echo "Skipping local user public key uploads.." 
+			break ;;
+	esac	
+done
+
+echo " "
+echo "Done."

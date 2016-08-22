@@ -1,0 +1,64 @@
+# shtype - determine shell type (hs '96)
+# Heiner Steven (heiner.steven@odn.de), Public Domain.
+#
+# Knows sh, ksh, ksh93, csh, tcsh, bash, zsh
+#
+# Thanks to
+#	Dave Plonka <dev_dp@mfa.com>	(BSH, POSIXSH)
+#
+
+# Check for Bourne shell or C shell dialect
+set x = 1
+test "$x" = 1 && goto CSH
+
+# Bourne shell dialect
+
+# Don't use external commands
+PATH=   export PATH
+
+# The standard Bourne shell does not know how to remove parts
+# of a variable with ${VAR%%pattern}.
+x="A.B"
+x=`(echo ${x%%.*}) 2>/dev/null`
+if [ "$x" = A ]
+then
+    # bash/zsh or ksh?
+    # bash/zsh use $[...] for arithmetic evaluation.
+    x=`(echo $[0+1]) 2>/dev/null`
+    if [ "$x" = 1 ]
+    then
+	# zsh tests with ${+x} if variable x is set
+	x=0
+	x=`(echo ${+x}) 2>/dev/null`
+	if [ "$x" = 1 ]
+	then
+	    echo ZSH
+	else
+	    echo BASH
+	fi
+    else
+	# ksh or ksh93?
+	# ksh93 can extract substrings from a variable.
+	x=AB
+        x=`(echo ${x:1:1}) 2>/dev/null`
+	if [ "$x" = B ]
+	then
+	    echo KSH93
+	else
+	    echo KSH
+	fi
+    fi
+else
+    echo BSH
+fi
+exit 0
+
+CSH:
+# C-Shell dialect
+# tcsh has a bindkey command
+if { bindkey >& /dev/null } then
+    echo TCSH
+else
+    echo CSH
+endif
+exit 0

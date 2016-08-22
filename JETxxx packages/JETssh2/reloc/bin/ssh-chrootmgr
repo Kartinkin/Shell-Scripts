@@ -1,0 +1,103 @@
+#! /bin/sh
+#
+# ssh-chrootmgr
+#
+# Author: Sami Lehtinen <sjl@ssh.com>
+#
+# Copyright (C) 2000 SSH Communications Security Corp, Helsinki, Finland
+# All rights reserved
+#
+# Script to copy static binaries of ssh-dummy-shell and sftp-server to
+# users' home directories, under $HOME/bin. creates the bin directory
+# if necessary. 
+
+usage="Usage: $0 [-h|--help|-\?] [-n] [-v] [-q] username ..."
+
+# Install required binaries to users home directory, under $USER/bin
+# digs users home directory from /etc/passwd, and 
+user=
+userdir=
+
+if test -z "$1"; then
+  echo $usage >&2
+  exit 1
+fi
+
+while expr $1 >& /dev/null 
+do
+    case "$1" in
+    --help|-h|-\?)
+      echo $usage >&2
+      exit 1
+      ;;
+    -n)
+      just_show="yes"
+      ;;
+    -v)
+      verbose="yes"
+      quiet=
+      ;;
+    -q)
+      quiet="yes"
+      verbose=
+      ;;
+    *)
+      user="$1"
+
+      if test -z "$user"; then
+      	echo "No user name given." >&2
+      	exit 1
+      fi
+      
+      # dig up user's home directory
+      userdir=`cat /etc/passwd | egrep "^$user" | sed -n 's/.*:\(.*\):.*/\1/p'`
+      
+      if test -z "$userdir"; then
+      	echo "Couldn't dig user directory from /etc/passwd. (user doesn't exist, or malformed /etc/passwd ?)" >&2
+	exit 1
+      fi
+      
+      if test "!" -d "$userdir"; then
+      	echo "User's home directory $userdir doesn't exist." >&2
+	exit 1
+      fi
+      
+      # find the static binaries from PATH environment variable
+      save_IFS="$IFS"
+      IFS=":"
+      for dir in $PATH; do
+        test -z "$dir" && dir=.
+        if test -f $dir/ssh-dummy-shell.static; then
+          full_path_to_progs="$dir"
+	  break
+        fi
+      done
+      IFS="$save_IFS"
+
+      if test -z "$full_path_to_progs"; then
+        echo "Couldn't find static binaries in \$PATH." >&2
+        exit 1
+      fi
+
+      test -n "$verbose" && echo "Path to static binaries: $full_path_to_progs" >&2
+
+      if test "!" -d "$userdir"/bin; then
+      	test -z "$quiet" && echo "Creating $userdir/bin..." >&2
+      	if test -z "$just_show" && ! mkdir "$userdir/bin"; then
+          exit 1
+        fi
+      fi
+
+      for file in ssh-dummy-shell.static sftp-server2.static; do
+        test -n "$verbose" && echo "Copying $full_path_to_progs/$file to $user's bin directory..." >&2
+        if test -z "$just_show" && ! cp $full_path_to_progs/$file $userdir/bin/`echo $file | sed -e 's/.static//'`; then
+          echo "Couldn't copy $file to $user's bin-directory." >&2
+          exit 1
+        fi
+      done
+
+      (cd $userdir/bin && ln -s sftp-server2 sftp-server)
+      ;;
+    esac
+    shift
+done

@@ -1,0 +1,489 @@
+.\"  -*- nroff -*-
+.\"
+.\" ssh2_config.5
+.\"
+.\" Author:	Tatu Ylonen <ylo@ssh.com>
+.\"		Markku-Juhani Saarinen <mjos@ssh.com>
+.\"		Sami Lehtinen <sjl@ssh.com>
+.\"		Timo J. Rinne <tri@ssh.com>
+.\"
+.\" Copyright (c) 1998,1999,2000,2001 SSH Communications Security, Finland
+.\" All rights reserved
+.\"
+.TH SSH2_CONFIG 5 "May 23, 2001" "SSH2" "SSH2"
+
+.SH NAME
+ssh2_config \- format of configuration file for ssh2
+
+.SH CONFIGURATION FILES
+.LP
+.B Ssh2
+obtains configuration data from the following sources (in this
+order): system's global configuration file (typically
+\fI/etc/ssh2/ssh2_config\fR), user's configuration file
+(\fI\&$HOME/\s+2.\s0ssh2/ssh2_config\fR) and the command line
+options.  For each parameter, the last obtained value will be
+effective.
+
+.LP
+
+Configuration file can begin with "metaconfig", that is, configuration
+for the configuration.
+
+If the configuration file starts with a line matching the following
+egrep style regex
+
+  #.*VERSION[ \\t\\f]+[0-9]+.[0-9]+
+
+it is interpreted as the version of the configuration style. If this
+kind of line is not found, the version is considered to be "1.1" .
+
+The version string can be followed by one or more metaconfiguration
+parameters. The lines have to start with '#', and they have to match
+the following egrep style regex
+
+  #[# \\t]+[A-Z0-9]+[ \\t]+.*
+
+Parsing of metaconfig directives stops with the first non-recognized
+line.
+
+Version 1.1 and newer recognize the following parameter:
+
+.TP
+.B REGEX-SYNTAX
+This denotes the regex syntax used to parse the configuration file in
+question. The regex syntax is used in parsing the labels, lists, etc,
+and when matching stuff with regex patterns specified in the
+configuration file.
+
+This can have one of `\fBegrep\fR', `\fBssh\fR', `\fBzsh_fileglob\fR'
+or `\fBtraditional\fR' as parameter (the arguments are not
+case-sensitive).  `\fBzsh_fileglob\fR' and `\fBtraditional\fR' are
+synonymous.
+
+.LP
+The configuration file has the following format:
+.IP
+`expression:' denotes the start of a per-host configuration block,
+where `expression' is an arbitrary string which distinguishes this
+block from others. The `expression' can contain wildcards. The
+`expression' will be compared with the hostname obtained from the
+command-line, and if it matches, the block will be
+evaluated. Evaluation stops at the next `expression:' statement. If
+more than one match is found, all will be evaluated and the last
+obtained values for parameters will be effective. Note that the
+`expression' doesn't have to be a real hostname, as long as the
+`expression' block contains a "\fBHost\fR" configuration parameter,
+where the real hostname to connect is defined.
+.IP
+Empty lines and lines starting with \'#\' are ignored as comments.
+.IP
+Otherwise a line is of the format "keyword arguments". Note that
+it is possible to enclose arguments in quotes, and use the standard
+C convention.  The possible keywords and their meanings are as
+follows (note that the configuration files are case-sensitive,
+but keywords are case-insensitive):
+.ne 3
+.de YN
+"\fByes\fR" or "\fBno\fR".
+..
+
+.TP
+.B AllowedAuthentications
+This keyword specifies the authentications methods that are allowed. 
+This is a comma-separated list currently consisting of the 
+following words:
+.BR password,
+.B publickey, 
+.B pam-1@ssh.com 
+and
+.BR hostbased .
+Each specifies an authentication method. The default is
+"\fBpublickey,password\fR". The authentication methods are tried in
+the order in which they are specified with this configuration
+parameter. That means that the least interactive methods should be
+placed first in this list, for example "\fBhostbased,
+publickey,password\fR" (because publickey authentication can be
+automated by the user, with \fBssh-agent\fR).
+.ne 3
+
+.TP
+.B AuthenticationSuccessMsg
+Specifies whether to display "\fIAuthentication successful.\fR" after
+authentication has completed successfully. This is mainly to prevent
+malicious servers from getting information from the user by displaying
+additional password or passphrase prompts. The argument must be
+.YN
+The default is "\fByes\fR".
+.ne 3
+
+.TP
+.B AuthorizationFile
+Specifies the name of the user's authorization file.
+.ne 3
+
+.TP
+.B BatchMode
+If set to "\fByes\fR",
+.B ssh2
+disables password/passhphrase querying. This is useful in scripts and
+other batch jobs where you don't have a user to supply the
+password. If the "\fBStrictHostKeyChecking\fR" parameter is set to
+"\fBask\fR",
+.B ssh2
+assumes a "\fBno\fR" answer to queries (this is because ssh doesn't
+even try to get user input when invoked with "\fBBatchMode
+yes\fR"). The argument must be
+.YN
+.ne 3
+
+.TP
+.B Ciphers
+Specifies the ciphers to use for encrypting the
+session. Currently, 
+.\" XXX Could this be made dist-dependent ?
+.IR des ,
+.IR 3des ,
+.IR blowfish , 
+.IR arcfour
+.IR twofish
+and
+.IR cast
+are supported. Multiple ciphers can be specified 
+as a comma-separated list.  Special values to this option are
+.IR any ,
+.IR anystd ,
+that allows only standard (see below) ciphers (and '\fInone\fR'), and
+.IR anycipher
+that allows either any available cipher or excludes non-encrypting
+cipher mode
+.IR none
+but allows all others.
+.IR anystdcipher
+is the same as \fIanycipher\fR above, but includes only those ciphers
+mentioned in the IETF-SecSH-draft (excluding '\fBnone\fR').
+.ne 3
+
+.TP
+.B ClearAllForwardings
+Specifies whether to clear all remote and local forwarded ports
+defined so far. The argument must be
+.YN
+Note that \fBscp\fR always automatically clears all forwarded ports.
+.ne 3
+
+.TP 
+.B Compression
+Specifies whether to use compression. The argument must be
+.YN
+.ne 3
+
+.TP
+.B DefaultDomain
+This option is only useful if set in the global configuration
+file. This is used by
+.B ssh2
+and
+.B ssh-signer2
+to find out the system name, if only the
+base part of the system name is available by normal means (those used
+by e.g.
+.BR hostname (1)).
+This is appended to the found system name, if 
+the system name returned doesn't contain a dot ('.').
+.ne 3
+
+.TP
+.B DontReadStdin
+Redirect input from /dev/null, ie. don't read stdin. The argument
+must be
+.YN
+.ne 3
+
+.TP
+.B EscapeChar
+Sets the escape character (default: ~).  The escape character can also
+be set on the command line.  The argument should be a single
+character, \'^\' followed by a letter, or "\fBnone\fR" to disable the escape
+character entirely (making the connection transparent for binary
+data).
+.ne 3
+
+.TP
+.B ForcePTTYAllocation
+For tty allocation. Ie. allocate a tty even if a command is
+given. The argument must be
+.YN
+.ne 3
+
+.TP
+.B ForwardAgent
+Specifies whether the connection to the authentication agent (if
+any) will be forwarded to the remote machine. The argument must
+be
+.YN
+.ne 3
+
+.TP
+.B ForwardX11
+Specifies whether X11 connections will be automatically
+redirected over the secure channel and DISPLAY set. 
+The argument must be
+.YN
+.ne 3
+
+.TP
+.B GatewayPorts
+Specifies that also remote hosts may connect to locally forwarded
+ports. The argument must be
+.YN
+The default is "\fBno\fR".
+.ne 3
+
+.TP
+.B GoBackground
+Requests 
+.B ssh2 
+to go to background after authentication is done and the 
+forwardings have been established. This is useful if 
+.B ssh2 
+is going to
+ask for passwords or passphrases, but the user wants it in the
+background. The argument must be
+"\fByes\fR", "\fBno\fR" or "\fBoneshot\fR". With "\fBoneshot\fR",
+.B ssh2
+behaves the same way as with `\fB\-f \fIo\fR' commandline arguments.
+The default is "\fBno\fR".
+.ne 3
+
+.TP
+.B Host
+Specifies the real host name to log into. With `expression' above, this can
+be used to specify nicknames or abbreviations for hosts. The default is 
+the name given on the command line. Numeric IP addresses are also permitted 
+(both on the command line and in HostName specifications).
+.ne 3
+
+.TP
+.B IdentityFile
+Specifies the name of the user's identification file. 
+.ne 3
+
+.TP 
+.B KeepAlive
+Specifies whether the system should send keepalive messages to the
+other side.  If they are sent, death of the connection or crash of one
+of the machines will be properly noticed.  However, this means that
+connections will die if the route is down temporarily, and some people
+find this annoying.  
+
+The default is "\fByes\fR" (to send keepalives), and the client will notice
+if the network goes down or the remote host dies.  This is important
+when using scripts, and many users want it too.
+
+To disable keepalives, the value should be set to "\fBno\fR" in both the
+server and the client configuration files.
+.ne 3
+
+.TP
+.B LocalForward
+Specifies that a TCP/IP port on the local machine is forwarded over the
+secure channel to given host:port from the remote machine. The argument 
+should be enclosed in double-quotes (""). The argument format is
+.I port:remotehost:remoteport \fR.
+.ne 3
+
+.TP
+.B MACs
+Specifies the MAC (Message Authentication Code) algorithm to use for
+data integrity verification. Currently,
+.\" XXX Could this be made dist-dependent ?
+.IR hmac-sha1 ,
+.IR hmac-sha1-96 ,
+.IR hmac-md5 , 
+.IR hmac-md5-96 ,
+.I hmac-ripemd160
+and
+.I hmac-ripemd160-96
+are supported, of which
+.IR hmac-sha1 ,
+.IR hmac-sha1-96 ,
+.I hmac-md5 
+and
+.I hmac-md5-96
+are included in all distributions. Multiple MACs can be specified 
+as a comma-separated list.  Special values to this option are
+.IR any ,
+.IR anystd ,
+that allows only standard (see below) MACs (and '\fInone\fR'), and
+.IR anymac
+that allows either any available MAC or excludes
+.IR none
+but allows all others.
+.IR anystdmac
+is the same as \fIanymac\fR above, but includes only those MACs
+mentioned in the IETF-SecSH-draft (excluding '\fBnone\fR').
+.ne 3
+
+.TP
+.B NoDelay
+If "\fByes\fR", enable socket option TCP_NODELAY. The argument must be
+.YN
+Default is "\fBno\fR".
+.ne 3
+
+.TP
+.B NumberofPasswordPrompts
+Specifies the number of password prompts before giving up. The argument must
+be an integer. Note that the server also limits the number of attempts,
+so setting this value larger than the server's value doesn't have any effect.
+Default value is three (3).
+.ne 3
+ 
+.TP
+.B PasswordPrompt
+Sets the password prompt that the user sees when connecting to a
+host. Variables '\fB%U\fR' and '\fB%H\fR' can be used to give the user's
+login name and host, respectively.
+.ne 3
+
+.TP
+.B Port
+Specifies the port number to connect on the remote host.  The default 
+port number is 22.
+.ne 3
+
+.TP
+.B QuietMode
+Quiet mode. Causes all warnings and diagnostic messages to be
+suppressed. Only fatal errors are displayed. The argument must be
+.YN
+.ne 3
+
+.TP
+.B RandomSeedFile
+Specifies the name of the user's randomseed file.
+.ne 3
+
+.TP
+.B RekeyIntervalSeconds
+Specifies the number of seconds that the key exchange is done again.
+The default is 3600 seconds. A value of '0' turns rekey-requests
+off. This doesn't prevent the server from requesting rekeys. Other
+servers may not have rekey-capabilities implemented correctly, and your
+connection may be cut off if you're connecting to a server other than
+.BR sshd2 .
+(The server may also possibly crash, but that is no fault of 
+.BR ssh2 ).
+.ne 3
+
+.TP
+.B RemoteForward
+Specifies that a TCP/IP port on the remote machine be forwarded over the
+secure channel to given host:port from the local machine.  The argument 
+should be enclosed in double-quotes (""). The argument format is
+.I port:remotehost:remoteport \fR.
+.ne 3
+
+.TP
+.B Ssh1AgentCompatibility
+Specifies whether to forward also an SSH1 agent connection.
+Legal values for this option are "\fBnone\fR", "\fBtraditional\fR" and
+"\fBssh2\fR".  With value "\fBnone\fR" (default), the SSH1 agent
+connection is not forwarded at all.  With value "\fBtraditional\fR",
+SSH1 agent connection is forwarded transparently like in SSH1.  Value 
+"\fBtraditional\fR" can always be used, but it constitutes a security
+risk, because the agent does not get the information about the forwarding
+path.  Value "\fBssh2\fR" makes SSH1 agent forwarding similar to SSH2
+agent forwarding and with this mode agent gets the information about
+the agent forwarding path.  Note that value "\fBssh2\fR" can only be
+used, if you use ssh-agent2 in SSH1 compatibility mode.
+.YN
+.ne 3
+
+.TP
+.B Ssh1Compatibility
+Specifies whether to use SSH1 compatibility code. With this option,
+.B ssh1
+is executed when the server supports only SSH 1.x protocols. The argument
+must be
+.YN
+.ne 3
+
+.TP
+.B Ssh1InternalEmulation
+Specifies whether to use SSH1 internal emulation code. With this option,
+.B ssh2
+can also communicate with ssh1 servers, without using an external
+.B ssh1
+program.  The argument must be
+.YN
+.ne 3
+
+.TP
+.B Ssh1Path
+Specifies the path to
+.B ssh1 
+client, which is executed if the
+server supports only SSH 1.x protocols. The arguments for 
+.B ssh2 
+are passed to the 
+.B ssh1 
+client. 
+.ne 3
+
+.TP
+.B SocksServer
+Overrides the value of 
+.B SSH_SOCKS_SERVER\fR environment variable.
+Otherwise, functions completely equivalently.
+.ne 3
+
+.TP
+.B StrictHostKeyChecking
+If this flag is set to "\fByes\fR", 
+.B ssh2
+will never automatically add host keys to the
+.I $HOME/.ssh2/hostkeys
+directory, and refuses to connect hosts whose host key has changed.
+This provides maximum protection against Trojan horse
+attacks. However, it can be somewhat annoying if you don't have the
+necessary keys in
+.I /etc/ssh2/hostkeys 
+and you frequently connect new hosts. Basically this option forces the
+user to manually add any new hosts. Normally this option is set to
+"\fBask\fR", and new hosts will automatically be added to the known
+host files after you have confirmed that you really want to do that. If
+this is set to "\fBno\fR" then the new host will automatically be
+added to the known host files. The host keys of known hosts will be
+verified automatically in either case. If this value is set to
+"\fBask\fR", the user also has the option to change the key on the
+disk on the fly.
+
+The argument must be
+"\fByes\fR", "\fBno\fR" or "\fBask\fR".
+.ne 3
+
+.TP
+.B User
+Specifies the user to log in as. This can be useful if you have a different
+user name in different machines. This saves the trouble of having to
+remember to specify the user name on the command line.
+.ne 3
+
+.TP
+.B VerboseMode
+Verbose mode.  Causes ssh2 to print debugging messages about its
+progress. This is helpful when debugging connection,
+authentication, and configuration problems.
+.ne 3
+
+.SH AUTHORS
+.LP
+
+SSH Communications Security Corp
+
+For more information, see http://www.ssh.com.
+
+.SH SEE ALSO
+.BR ssh2 (1)

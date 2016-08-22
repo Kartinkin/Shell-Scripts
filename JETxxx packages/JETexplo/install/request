@@ -1,0 +1,149 @@
+#!/usr/bin/ksh -p
+
+Version=`pkgparam SUNWexplo VERSION`
+Version=`expr "$Version" : '\(.*\),.*'`
+echo "EXP_VERSION="${Version} >$1
+
+Dir=`pkgparam SUNWexplo BASEDIR`
+Version=`expr "$Version" : '\(.*\)\..*'`
+if [ "${Version}" = '5' ]
+then
+	Dir="${Dir}/SUNWexplo"
+fi
+echo "BASEDIR=${Dir}" >>$1
+
+#echo "BASEDIR=`pkginfo -l SUNWexplo | grep BASEDIR | awk '{print $2}'`" >$1
+#echo "EXP_VERSION=`pkginfo -l SUNWexplo | grep VERSION | awk '{print $2}'`" | sed -e 's/,//' >>$1
+#echo "EXP_VERSION=`pkginfo -l SUNWexplo | grep VERSION | awk '{print $2}' | awk -F, '{ print $1 }'`" >>$1
+
+
+#
+#  Functions
+#
+prompt () {
+    VAR=$"$1"
+    VAL=`eval echo ${VAR}`
+
+    # Display prompt
+    echo "$2"
+    echo "[${VAL}]: \c"
+
+    # Read response
+    read ANSWER
+
+    # Accept crlf as default
+    if [ -z "${ANSWER}" ]; then
+	ANSWER=${VAL}
+    fi
+
+    # Set (or unset) variable
+    eval "$1=\"${ANSWER}\""
+    if [ "${ANSWER}" = '-' ]; then
+	eval "unset $1"
+    fi
+}
+
+yorn () {
+    VAR=$"$1"
+
+    while :
+    do
+	# Display prompt
+	echo "$2"
+	echo "[y,n] \c"
+
+	# Read response
+	read ANSWER
+
+	# Acceptable responses are y|yes|n|no
+	case `echo "${ANSWER}" | tr '[A-Z]' '[a-z]'` in
+	    yes | y)
+		ANSWER=yes
+		break
+		;;
+	    no | n)
+		ANSWER=no
+		break
+		;;
+	    *)
+		echo "Please answer y, yes, n or no"
+		continue
+		;;
+	esac
+
+    done
+
+    # Set variable
+    eval "$1=\"${ANSWER}\""
+}
+
+yorn ABS "Are the ABS-Ural programs installed? \c"
+if [ "${ABS}" = no ]
+then
+	exit 0
+fi
+
+# Get customer information
+DONE=no
+while [ -n "$DONE" ] && expr "X$DONE" : "X[Nn]" >/dev/null
+do
+	echo ""
+	echo "Control contour"
+	prompt ABS_CONTROL_USER "Control contour operator's name \c"
+	prompt ABS_CONTROL_ENVFILE "Full path to control contour's environment file \c"
+
+	echo ""
+	echo "Processing contour"
+	prompt ABS_PROCESSING_USER "Control contour operator's name \c"
+	prompt ABS_PROCESSING_ENVFILE "Full path to processing contour's environment file \c"
+
+	echo ""
+	echo "You have answered:
+       Control contour operator's name : ${ABS_CONTROL_USER}
+    Control contour's environment file : ${ABS_CONTROL_ENVFILE}
+
+       Control contour operator's name : ${ABS_PROCESSING_USER}
+ Processing contour's environment file : ${ABS_PROCESSING_ENVFILE}"
+
+	echo ""
+	Err=no
+	for i in ${ABS_CONTROL_USER} ${ABS_PROCESSING_USER}
+	do
+		grep $i /etc/passwd >/dev/null 2>&1
+		if [ $? != 0 ]
+		then
+			echo "Error! User $i not found."
+			Err=yes
+		fi
+	done
+	for i in ${ABS_CONTROL_ENVFILE} ${ABS_PROCESSING_ENVFILE}
+	do
+		if [ ! -f $i ]
+		then
+			echo "Error! File $i not found."
+			Err=yes
+		fi
+	done
+	if [ "${Err}" = no ]
+	then
+		echo ""
+		yorn DONE "Are these values okay? \c"
+
+		if [ "${DONE}" = no ]
+		then
+			yorn ABORT "Abort install? \c"
+			if [ "${ABORT}" = yes ]
+			then
+				exit 1
+			fi
+		fi
+	fi
+done
+
+# Make environment variables available to installation service
+cat >>$1 <<!
+ABS_CONTROL_USER="${ABS_CONTROL_USER}"
+ABS_CONTROL_ENVFILE="${ABS_CONTROL_ENVFILE}"
+ABS_PROCESSING_USER="${ABS_PROCESSING_USER}"
+ABS_PROCESSING_ENVFILE="${ABS_PROCESSING_ENVFILE}"
+!

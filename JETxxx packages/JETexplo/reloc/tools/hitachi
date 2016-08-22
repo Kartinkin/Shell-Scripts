@@ -1,0 +1,218 @@
+#!/bin/ksh -p
+#
+# Copyright Ilya Voronin <ivoronin@jet.su>,  2005
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only.
+# See the http://www.opensolaris.org/license/ for details.
+#
+# Version: 0.1
+#
+
+# Explorer Version:
+EXP_VERSION=3.6
+
+# Source Common Functions
+. ${EXP_LIB}/exp_tools
+
+# Run if specified to do so
+script=${0##*/}
+which_gate_exit storage default all $script
+
+#require "pkginfo -q JETdamp" "Hitachi Disk Array Management Program not installed"
+
+#
+# Parse Input Config File
+#
+config_input() {
+	if [ -z "$EXP_HITINPUT_CONFIG" ]; then
+		EXP_HITINPUT_CONFIG="${EXP_ETC}/hiinput.txt"
+	fi
+
+	TEXT=`gettext "explorer not configured for running DAMP tool"`
+	egrep -s -v '^#' "${EXP_HITINPUT_CONFIG}"
+	require "test $? -eq 0"  "${TEXT}"
+
+	TEXT=`gettext "DAMP not installed in specified directory"`
+	EXP_DAMP_ROOT_DIR_PATH="`awk '/^damp_root_dir/  { print $2 }' ${EXP_HITINPUT_CONFIG}`"
+	require "test -f \"$EXP_DAMP_ROOT_DIR_PATH/auunitref\"" "${TEXT}"
+}
+
+#
+# Get input interactively
+#
+interactive_input() {
+
+	while [ -z "$EXP_DAMP_ROOT_DIR_PATH" ]; do
+		TEXT=`gettext "Specify DAMP installation directory: "`
+		prompt "${TEXT}\c"
+		read EXP_DAMP_ROOT_DIR_PATH
+		if [ ! -f "${EXP_DAMP_ROOT_DIR_PATH}/auunitref" ]; then
+			TEXT=`gettext "DAMP not installed in specified directory\n"`
+			logfile NOTNOISE ${TEXT}
+			unset EXP_DAMP_ROOT_DIR_PATH
+		fi
+	done
+}
+
+collect_data() {
+
+	#
+	# Global DAMP Information
+	#
+	get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auunitref"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auextprog -refer"	"${EXP_DAMP_OUTPUT_DIR}"
+	get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aumail -refer"	"${EXP_DAMP_OUTPUT_DIR}"
+	get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auversion"		"${EXP_DAMP_OUTPUT_DIR}"
+
+	#
+	# DAMP
+	#
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/Hostinfo.dat"	"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/Id00.txt"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/Id01.txt"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/errlog.txt"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/lanconf.inf"	"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/mailinf"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/utlprm.inf"		"${EXP_DAMP_OUTPUT_DIR}"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/log/apilog"		"${EXP_DAMP_OUTPUT_DIR}log/"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/log/cui.log"	"${EXP_DAMP_OUTPUT_DIR}log/"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/log/cuilog"		"${EXP_DAMP_OUTPUT_DIR}log/"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/log/svplog"		"${EXP_DAMP_OUTPUT_DIR}log/"
+	get_file "${EXP_DAMP_ROOT_DIR_PATH}/log/svplog.pre"	"${EXP_DAMP_OUTPUT_DIR}log/"
+
+	#
+	# For each array unit
+	#
+	ARRAY_UNITS="`$EXP_DAMP_ROOT_DIR_PATH/auunitref | sed 1d | cut -d ' ' -f 1` " # strip header
+	for ARRAY_UNIT in $ARRAY_UNITS; do
+	
+		#
+		# General Information
+		#
+	
+		# Firmware Revision and serial number
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aurev -unit ${ARRAY_UNIT}" \
+					"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+	
+		# LAN Setting
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aucrlan -unit ${ARRAY_UNIT}" \
+					"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		
+		# Info Messages
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auinfomsg -unit ${ARRAY_UNIT}" \
+					"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+
+		# Configuration
+		${EXP_DAMP_ROOT_DIR_PATH}/auconfigout	 -unit ${ARRAY_UNIT} \
+			-file "${EXP_TARGET}/${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/auconfigout_-unit-${ARRAY_UNIT}" 
+
+		# System parameters
+		${EXP_DAMP_ROOT_DIR_PATH}/ausyspout	 -unit ${ARRAY_UNIT} \
+			-file "${EXP_TARGET}/${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/ausyspout_-unit-${ARRAY_UNIT}"
+	
+		#
+		# Logical Configuration
+		# 
+	
+		# RAID Groups
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aurgref -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in blocks
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aurgref -unit ${ARRAY_UNIT} -m" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in megabytes
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aurgref -unit ${ARRAY_UNIT} -g" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in gigabytes
+	
+		# Logical Units
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auluref -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # on blocks
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auluref -unit ${ARRAY_UNIT} -m" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in megabytes
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auluref -unit ${ARRAY_UNIT} -g" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in gigabytes
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auluref -unit ${ARRAY_UNIT} -last" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # last defined
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auluguard -unit ${ARRAY_UNIT} -refer" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+	
+		# Unified Logical Units
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aumluref -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in blocks
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aumluref -unit ${ARRAY_UNIT} -m" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in megabytes
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aumluref -unit ${ARRAY_UNIT} -g" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" # in gigabytes
+	
+		# Host groups
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auhgdef -unit ${ARRAY_UNIT} -refer" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auhgmap -unit ${ARRAY_UNIT} -refer" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auhgopt -unit ${ARRAY_UNIT} -refer" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auhgwwn -unit ${ARRAY_UNIT} -refer" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		${EXP_DAMP_ROOT_DIR_PATH}/auhgout	 -unit ${ARRAY_UNIT} \
+			-file "${EXP_TARGET}/${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/auhgout_-unit_${ARRAY_UNIT}"
+	
+		#
+		# Physical Configuration
+		#
+	
+		# HDDs
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/audrive -unit ${ARRAY_UNIT} -status" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/audrive -unit ${ARRAY_UNIT} -vendor" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+	
+		# Cache 
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/aucache -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+	
+		# Power supply
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/ausupply -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+
+ 		# Parts
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/auparts -unit ${ARRAY_UNIT}" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/"
+
+		#
+		# Statistical Information
+		#
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/austatistics -unit ${ARRAY_UNIT} -memory" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" 
+	
+		get_cmd "${EXP_DAMP_ROOT_DIR_PATH}/austatistics -unit ${ARRAY_UNIT} -drive" \
+			"${EXP_HITACHI_OUTPUT_DIR}${ARRAY_UNIT}/" 
+
+	
+	done
+}
+
+#
+# Run interactive?
+#
+which_gate interactive && INTERACTIVE="YES"
+
+if [ -n "${INTERACTIVE}" ]; then
+	interactive_input
+else
+	config_input
+fi
+
+#
+# Setup Environment
+#
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EXP_DAMP_ROOT_DIR_PATH/lib
+DAMP_ROOT_DIR_PATH=$EXP_DAMP_ROOT_DIR_PATH
+export LD_LIBRARY_PATH DAMP_ROOT_DIR_PATH
+
+# Explorer output directories
+EXP_HITACHI_OUTPUT_DIR="disks/hitachi/"
+EXP_DAMP_OUTPUT_DIR="damp/"
+
+#
+# Run
+#
+collect_data
