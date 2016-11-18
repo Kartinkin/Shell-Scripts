@@ -9,4 +9,5 @@ Scripts out of the past
 	
 * Some artifacts and unknown scripts
 	
+* Technical tests (and all that)
 	
