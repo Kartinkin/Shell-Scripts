@@ -1,4 +1,5 @@
-Add central:
+# Create records in /etc/hosts for all VMs
+Add central to /etc/host:
   host.present:
     - names:
       - {{ pillar['mq-server']['hostname'] }}
@@ -6,20 +7,8 @@ Add central:
     - ip: {{ pillar['mq-server']['ip'] }}
 
 {% for hostname, ip in pillar.get('workers', {}).items() %}
-Add {{ hostname }}:
+Add {{ hostname }} to /etc/host:
   host.present:
     - name: {{ hostname }}
     - ip: {{ ip }}
 {% endfor %}
-
-python-packages:
-  pkg.installed:
-    - pkgs:
-      - python
-      - python-pip
-
-pika:
-  pip.installed:
-    - require:
-      - pkg: python-packages
-

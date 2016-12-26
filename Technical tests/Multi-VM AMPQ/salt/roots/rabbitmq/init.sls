@@ -6,4 +6,3 @@ rabbitmq-server:
     - enable: True
     - watch:
       - pkg: rabbitmq-server
-

@@ -10,6 +10,7 @@ channel = connection.channel()
 channel.queue_declare(queue = QUEUE_NAME, durable = True)
 
 def callback(channel, method, properties, body):
+    """ Function gets message, tries convert content to int and sleeps """
 	print "Received", body
 	try:
 		time.sleep(int(body))
