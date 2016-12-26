@@ -1,0 +1,19 @@
+modules {
+  module {
+    name = "monrabbit"
+    language = "python"
+  }
+}
+
+
+
+
+collection_group {
+  collect_every = 5
+  time_threshold = 60
+  metric {
+    name = "mq_length"
+    title = "RabbitMQ queue length"
+    value_threshold = 6
+  }
+}

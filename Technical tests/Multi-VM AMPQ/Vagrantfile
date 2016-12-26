@@ -1,0 +1,90 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# vagrant plugin install vagrant-vbguest
+
+# Prefix of private network
+PRIVATE_NET = "192.168.141."
+WORKERS_MAX_NUM = 5
+
+SERVER_HOSTNAME = "central"
+SERVER_PRIVATE_IP = PRIVATE_NET + "5"
+SERVER_RAM = 512
+MONITORING_PORT = 8888
+
+WORKER_HOSTNAME = "worker"
+WORKER_PRIVATE_IP_START = 100
+WORKER_RAM = 256
+
+Vagrant.configure("2") do |config|
+
+	config.vm.synced_folder ".", "/vagrant", disabled: true
+	
+	# === Configure Salt provisioning ===
+	config.vm.synced_folder "salt/roots/", "/srv/salt/"
+	pillars = {}	# I'll generate pillar with hostnames and IPs
+	config.vm.provision :salt do |salt|
+    	salt.masterless = true
+    	salt.minion_config = "salt/minion"
+    	salt.run_highstate = true
+
+    	# Create pillars with hostnames and IPs
+		pillars = {
+			# Server hostname and address
+			"mq-server" => {
+				"hostname" => SERVER_HOSTNAME,
+				"ip" => SERVER_PRIVATE_IP },
+			
+			# Worker hostname
+			"workername" => WORKER_HOSTNAME,
+			
+			# List of workers
+ 		    "workers" => {}
+ 		} 
+
+		# Build list of workers: it's number of (hostname, ip) pairs
+		WORKERS_MAX_NUM.times do |worker_no|
+			pillars["workers"][WORKER_HOSTNAME + "-#{worker_no}"] =
+				PRIVATE_NET + "#{WORKER_PRIVATE_IP_START + worker_no}"
+    	end
+    	salt.pillar(pillars)
+	end
+
+	# === Central ===
+ 	config.vm.define "CENTRAL" do |central|
+		central.vm.box = "hashicorp/precise64"
+		central.vm.hostname = pillars["mq-server"]["hostname"]
+		central.vm.network :forwarded_port, guest: 80, host: MONITORING_PORT
+		central.vm.network "private_network", ip: pillars["mq-server"]["ip"]
+
+	    central.vm.provider "virtualbox" do |box|
+    	    box.customize ["modifyvm", :id, "--memory", SERVER_RAM]
+        	box.name = pillars["mq-server"]["hostname"]
+#        	box.gui = true
+    	end
+  	end
+
+	# === Workers ===
+	
+	# Create worker boxes but start only first
+	astart = true
+	pillars["workers"].each do |pair|
+		worker_name = pair[0]
+		/-(?<worker_no>.*)/i =~ worker_name
+		worker_ip = pair[1]
+		config.vm.define "WORKER_#{worker_no}", autostart: astart do |worker|
+			worker.vm.box = "hashicorp/precise64"
+			worker.vm.hostname = worker_name
+			worker.vm.network "private_network", ip: worker_ip
+
+			worker.vm.provider "virtualbox" do |box|
+				box.customize ["modifyvm", :id, "--memory", WORKER_RAM]
+				box.name = worker_name
+#				box.gui = true
+			end
+		end
+		astart = false
+	end
+
+end
+  
