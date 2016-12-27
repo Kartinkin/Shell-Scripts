@@ -26,7 +26,11 @@ Set udp_send_channel:
     - name: /etc/ganglia/gmond.conf
     - marker_start: "udp_send_channel {"
     - marker_end: "}"
-    - content: "  port = {{ port }}"
+    - content: |
+        mcast_join = 239.2.11.71
+        mcast_if = eth1
+        port = {{ port }}
+        ttl = 1
     - show_changes: True
 
 Set udp_recv_channel: 
@@ -34,7 +38,11 @@ Set udp_recv_channel:
     - name: /etc/ganglia/gmond.conf
     - marker_start: "udp_recv_channel {" 
     - marker_end: "}"
-    - content: "  port = {{ port }}"
+    - content: |
+        mcast_join = 239.2.11.71
+        mcast_if = eth1
+        port = {{ port }}
+        bind = 239.2.11.71
     - show_changes: True
 
 Set tcp_accept_channel:

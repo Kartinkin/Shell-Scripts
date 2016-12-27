@@ -11,13 +11,13 @@ channel.queue_declare(queue = QUEUE_NAME, durable = True)
 
 def callback(channel, method, properties, body):
     """ Function gets message, tries convert content to int and sleeps """
-	print "Received", body
-	try:
-		time.sleep(int(body))
-	except ValueError:
-		pass
-	print "Done"
-	channel.basic_ack(delivery_tag = method.delivery_tag)
+    print "Received", body
+    try:
+        time.sleep(int(body))
+    except ValueError:
+        pass
+    print "Done"
+    channel.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
 channel.basic_consume(callback, queue = QUEUE_NAME)

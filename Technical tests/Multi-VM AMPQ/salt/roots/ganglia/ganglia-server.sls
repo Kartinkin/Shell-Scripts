@@ -32,6 +32,7 @@ gmetad:
       - pkg: ganglia-server
       - file: Comment default data source
       - file: Add data sources
+      - network: routes
 
 Comment default data source:
   file.comment:

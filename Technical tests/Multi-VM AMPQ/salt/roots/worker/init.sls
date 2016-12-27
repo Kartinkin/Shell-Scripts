@@ -3,7 +3,7 @@
 
 worker:
   file.managed:
-    - name: {{ worker_py }}
+    - name: {{ worker_path }}
     - source: salt://worker/worker.py
     - user: {{ pillar['Worker']['user'] }}
     - group: {{ pillar['Worker']['group'] }}

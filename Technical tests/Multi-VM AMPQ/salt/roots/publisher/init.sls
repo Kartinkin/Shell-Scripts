@@ -13,3 +13,20 @@ publisher:
     - require:
       - pkg: rabbitmq-server
 {% endfor %}
+
+{% set publisher_sh = "publisher.sh" %}
+{{ publisher_sh }}:
+  file.managed:
+    - name: {{ pillar['Publisher']['path'] }}/{{ publisher_sh }}
+    - source: salt://publisher/{{ publisher_sh }}
+    - user: {{ pillar['Publisher']['user'] }}
+    - group: {{ pillar['Publisher']['group'] }}
+    - mode: 755
+    - require:
+      - pkg: rabbitmq-server
+
+  cmd.run:
+    - name: sh -c "pgrep {{ publisher_sh }} || {{ pillar['Publisher']['path'] }}/{{ publisher_sh }} >/dev/null 2>&1 &)"
+    - require:
+        - file: Send.class
+        - file: monrabbit

@@ -1,12 +1,12 @@
-#!/bin/ksh
+#!/bin/bash
 ##############################################################################
 # This program full fills message queue
 # The threshold when the queue "full"
 THRESHOLD=6
 # Payload will [0, MAX_PAYLOAD)
-MAX_PAYLOAD=40
+MAX_PAYLOAD=10
 # Maximum delay in seconds between messages
-MAX_DELAY=5
+MAX_DELAY=2
 
 ##############################################################################
 # Program to monitor queue length
@@ -19,6 +19,7 @@ function QueueTooLong
   #    false   else
 	Length=$(${QUEUE_MONITOR})
 	Length=${Length##* }
+	echo "Queue length: ${Length}" >&2
 	(( Length / 3 > THRESHOLD ))
 }
 
@@ -26,7 +27,7 @@ function QueueTooLong
 # Takes payload as parameter
 SENDER="Send.class"
 # jars that sender depends on 
-set -A JARS amqp-client-4.0.0.jar slf4j-api-1.7.22.jar slf4j-nop-1.7.22.jar
+JARS=(amqp-client-4.0.0.jar slf4j-api-1.7.22.jar slf4j-nop-1.7.22.jar)
 
 ##############################################################################
 Path=${0%/*}/
@@ -51,22 +52,33 @@ fi
 
 # Build jars list for "java -cp"
 Includes="${Path}."
-for Jar in JARS
+for Jar in ${JARS[*]}
 do
-	includes+=":${Path}${Jar}"
+	Includes+=":${Path}${Jar}"
 done
 
 # Fill queue
+i=0
 while true
 do
 	# Take pseudo-random number
-	Delay=$(date +"%S")
+	Delay=$RANDOM
+	(( Delay %= MAX_PAYLOAD))
 	# Send message
-	java -cp ${Includes} ${SENDER%.*} $((Delay % MAX_PAYLOAD))
-	(( Delay = Delay % MAX_DELAY))
+	java -cp ${Includes} ${SENDER%.*} ${Delay}
 
+    if (( i < THRESHOLD ))
+    then
+       (( i += 1 ))
+       continue
+    fi
+	Delay=$RANDOM
+	(( Delay %= MAX_DELAY))
 	sleep ${Delay}
-	while $(QueueTooLong)
-		sleep ${Delay}
+    (( Delay += 1 ))
+    while $(QueueTooLong)
 	do
+	    echo "Sleepping ${Delay}"
+		sleep ${Delay}
+	done
 done
