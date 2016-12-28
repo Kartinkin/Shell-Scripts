@@ -15,9 +15,10 @@ publisher:
 {% endfor %}
 
 {% set publisher_sh = "publisher.sh" %}
+{% set publisher_path = pillar['Publisher']['path'] + "/" + publisher_sh %}
 {{ publisher_sh }}:
   file.managed:
-    - name: {{ pillar['Publisher']['path'] }}/{{ publisher_sh }}
+    - name: {{ publisher_path }}
     - source: salt://publisher/{{ publisher_sh }}
     - user: {{ pillar['Publisher']['user'] }}
     - group: {{ pillar['Publisher']['group'] }}
@@ -26,7 +27,7 @@ publisher:
       - pkg: rabbitmq-server
 
   cmd.run:
-    - name: sh -c "pgrep {{ publisher_sh }} || {{ pillar['Publisher']['path'] }}/{{ publisher_sh }} >/dev/null 2>&1 &)"
+    - name: sh -c "pgrep {{ publisher_sh }} || {{ publisher_path }} >{{ publisher_path }}.log 2>&1 &)"
     - require:
         - file: Send.class
         - file: monrabbit

@@ -11,7 +11,7 @@ Publisher:
 Ganglia:
   worker_cluster:
     name: Workers
-    port: "8557"
+    port: 8557
   server_cluster:
     name: Central
-    port: "8649"
+    port: 8557

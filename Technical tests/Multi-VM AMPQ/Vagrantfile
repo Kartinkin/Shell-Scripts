@@ -53,8 +53,8 @@ Vagrant.configure("2") do |config|
 
 	# === Central ===
  	config.vm.define "CENTRAL" do |central|
-		central.vm.box = "hashicorp/precise64"
-		central.vm.hostname = pillars["mq-server"]["hostname"]
+		central.vm.box = "hashicorp/precise64" #"ubuntu/xenial64" #
+ 		central.vm.hostname = pillars["mq-server"]["hostname"]
 		central.vm.network :forwarded_port, guest: 80, host: MONITORING_PORT
 		central.vm.network "private_network", ip: pillars["mq-server"]["ip"]
 

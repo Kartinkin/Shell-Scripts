@@ -6,9 +6,10 @@ base:
   {{ pillar['mq-server']['hostname'] }}:
     - rabbitmq
     - publisher
-    - ganglia.ganglia-server
-    
+#    - ganglia.ganglia-server
+    - nagios-server
+         
   '{{ pillar['workername'] }}*':
     - worker
-    - ganglia.ganglia-node
-
+#    - ganglia.ganglia-node
+    - nagios-monion

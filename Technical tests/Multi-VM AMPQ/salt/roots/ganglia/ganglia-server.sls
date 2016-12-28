@@ -32,12 +32,13 @@ gmetad:
       - pkg: ganglia-server
       - file: Comment default data source
       - file: Add data sources
-      - network: routes
 
 Comment default data source:
   file.comment:
     - name: /etc/ganglia/gmetad.conf
     - regex: ^data_source\s["']((?!Central).)*['"]
+    - require:
+      - pkg: ganglia-server
 
 {% set server_cluster_name = pillar['Ganglia']['server_cluster']['name'] %}
 {% set server_cluster_port = pillar['Ganglia']['server_cluster']['port'] %}
@@ -51,11 +52,13 @@ Add data sources:
     - marker_start: "# -START- Salt.ganglia.ganglia-server.sls" 
     # I didn't find lambda...
     {% set workers = pillar.get('workers', {}).keys() %}
-    {% set port = ":" + worker_cluster_port + " " %}
+    {% set port = ":" + worker_cluster_port.__str__() + " " %}
     - content: |
         data_source "{{ server_cluster_name }}" 30 localhost:{{ server_cluster_port }}
         data_source "{{ worker_cluster_name }}" {{ port.join(workers) }}{{ port }}
     - marker_end: "# --END-- Salt.ganglia.ganglia-server.sls" 
+    - require:
+      - pkg: ganglia-server
 
 # Configure Ganglia monitor
 ganglia-monitor:
@@ -70,13 +73,15 @@ ganglia-monitor:
       - file: modpython config
       - file: monrabbit
       - file: monrabbit config
- 
+
 Add node to cluster:    
   file.blockreplace:
     - name: /etc/ganglia/gmond.conf
     - marker_start: "cluster {"
     - marker_end: owner = "unspecified"
     - content: '  name = "{{ server_cluster_name }}"'
+    - require:
+      - pkg: ganglia-server
 
 Set udp_recv_channel: 
   file.blockreplace:
@@ -84,6 +89,8 @@ Set udp_recv_channel:
     - marker_start: "udp_recv_channel {" 
     - marker_end: "}"
     - content: "  port = {{ server_cluster_port }}"
+    - require:
+      - pkg: ganglia-server
 
 Set tcp_accept_channel:
   file.blockreplace:
@@ -91,17 +98,20 @@ Set tcp_accept_channel:
     - marker_start: "tcp_accept_channel {"
     - marker_end: "}"
     - content: "  port = {{ server_cluster_port }}"
+    - require:
+      - pkg: ganglia-server
 
 Set udp_send_channel:
   file.blockreplace:
     - name: /etc/ganglia/gmond.conf
     - marker_start: "udp_send_channel {"
-    - marker_end: "}"
     - content: |
         host = localhost
         port = {{ server_cluster_port }}
         ttl = 1
-    - show_changes: True
+    - marker_end: "}"
+    - require:
+      - pkg: ganglia-server
 
 # Configure gmont to monitor message queue
 modpython config:
@@ -112,6 +122,8 @@ modpython config:
     - user: root
     - group: root
     - mode: 644
+    - require:
+      - pkg: ganglia-server
  
 monrabbit:
   file.managed:
@@ -123,6 +135,7 @@ monrabbit:
     - mode: 755
     - require:
       - pip: pika
+      - pkg: ganglia-server
 
 monrabbit config:
   file.managed:
@@ -132,3 +145,28 @@ monrabbit config:
     - user: root
     - group: root
     - mode: 644
+    - require:
+       - pkg: ganglia-server
+
+#Set mq_report:
+#  file.blockreplace:
+#    - name: /usr/share/ganglia-webfrontend/templates/default/cluster_view.tpl 
+#    - marker_start: '<TD ROWSPAN=2 ALIGN="CENTER" VALIGN=top>'
+#    - content: |
+#        <A HREF="./graph.php?g=mq_report&amp;z=large&amp;{graph_args}">
+#        <IMG BORDER=0 ALT="{cluster} LOAD"
+#        SRC="./graph.php?g=mq_report&amp;z=medium&amp;{graph_args}">
+#        </A>
+#    - marker_end: '<A HREF="./graph.php?g=load_report&amp;z=large&amp;{graph_args}">'
+#    - require:
+#       - pkg: ganglia-server
+
+mq_report.php:
+  file.managed:
+    - name: /usr/share/ganglia-webfrontend/graph.d/mq_report.php
+    - source: salt://ganglia/mq_report.php
+    - user: root
+    - group: root
+    - mode: 644
+    - require:
+       - pkg: ganglia-server

@@ -39,14 +39,14 @@ fi
 # and in directory this script called from
 if [[ ! -f ${Path}${SENDER} ]]
 then
-	print "ERROR: Neither ./${SENDER} nor ${Path}${SENDER}	found."
+	print "ERROR: Neither ./${SENDER} nor ${Path}${SENDER}	found." >&2
 	exit 1
 fi
 
 # Check QUEUE_MONITOR presents
 if [[ ! -x ${QUEUE_MONITOR} ]]
 then
-	print "ERROR: ${QUEUE_MONITOR} not found."
+	print "ERROR: ${QUEUE_MONITOR} not found." >&2
 	exit 1
 fi
 
@@ -65,20 +65,21 @@ do
 	Delay=$RANDOM
 	(( Delay %= MAX_PAYLOAD))
 	# Send message
-	java -cp ${Includes} ${SENDER%.*} ${Delay}
+	java -cp ${Includes} ${SENDER%.*} ${Delay} 1>&2
 
-    if (( i < THRESHOLD ))
-    then
-       (( i += 1 ))
-       continue
-    fi
+    #if (( i < THRESHOLD ))
+    #then
+    #    # Fill the queue up to threshold at first
+    #    (( i += 1 ))
+    #    continue
+    #fi
 	Delay=$RANDOM
 	(( Delay %= MAX_DELAY))
 	sleep ${Delay}
     (( Delay += 1 ))
     while $(QueueTooLong)
 	do
-	    echo "Sleepping ${Delay}"
+	    echo "Sleepping ${Delay}" >&2
 		sleep ${Delay}
 	done
 done

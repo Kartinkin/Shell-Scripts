@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import pika
 import time
+import sys
 
 QUEUE_NAME = "technical_test"
 MQ_SERVER = "mq-server"
@@ -12,6 +13,7 @@ channel.queue_declare(queue = QUEUE_NAME, durable = True)
 def callback(channel, method, properties, body):
     """ Function gets message, tries convert content to int and sleeps """
     print "Received", body
+    sys.stdout.flush()
     try:
         time.sleep(int(body))
     except ValueError:

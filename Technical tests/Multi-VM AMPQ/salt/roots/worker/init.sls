@@ -10,6 +10,6 @@ worker:
     - mode: 755
       
   cmd.run:
-    - name: sh -c "pgrep {{ worker_py }} || {{ worker_path }} >/dev/null 2>&1 &)"
+    - name: sh -c "pgrep {{ worker_py }} || {{ worker_path }} >>{{ worker_path }}.log 2>&1 &)"
     - require:
       - pkg: python-packages # Python and pika packages come from common.sls
