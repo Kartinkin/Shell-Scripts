@@ -10,20 +10,14 @@ ganglia-server:
 
 ##############################################################################
 # Configure Apache
-apache2:
-  service.running:
-    - enable: True
-    - reload: True
-    - watch:
-      - file: httpd_config
-
-httpd_config:
+/etc/apache2/sites-enabled/ganglia.conf:
   file.copy:
-    - name: /etc/apache2/sites-enabled/ganglia.conf
     - source: /etc/ganglia-webfrontend/apache.conf
     - require:
       - pkg: ganglia-server
- 
+    - watch_in:
+      - pkg: httpd-service
+
 ##############################################################################
 # Configure Ganglia MetaData daemon with to clusters:
 #   first for mqserver
@@ -134,6 +128,7 @@ monrabbit:
   file.symlink:
     - name:  /usr/lib/ganglia/python_modules/monrabbit.py
     - target: {{ pillar['Publisher']['path'] }}/check_mq.py
+    - makedirs: True
     - require:
       - file: check_mq.py
 

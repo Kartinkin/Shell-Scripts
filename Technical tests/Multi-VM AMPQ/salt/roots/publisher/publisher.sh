@@ -11,14 +11,15 @@ MAX_DELAY=2
 ##############################################################################
 # Program to monitor queue length
 # It prints string like "<some name> = <value>"
-QUEUE_MONITOR="/usr/lib/ganglia/python_modules/monrabbit.py"
+Path=${0%/*}/
+QUEUE_MONITOR="${Path}check_mq.py"
 
 function QueueTooLong
 { # Function checks queue length and returns
   #    true    queue length > THRESHOLD * 3
   #    false   else
-	Length=$(${QUEUE_MONITOR})
-	Length=${Length##* }
+	set -- $(${QUEUE_MONITOR})
+	Length=$3
 	echo "Queue length: ${Length}" >&2
 	(( Length / 3 > THRESHOLD ))
 }
@@ -30,7 +31,6 @@ SENDER="Send.class"
 JARS=(amqp-client-4.0.0.jar slf4j-api-1.7.22.jar slf4j-nop-1.7.22.jar)
 
 ##############################################################################
-Path=${0%/*}/
 # Looking for SENRER in current directory
 if [[ -f ${SENDER} ]]
 then

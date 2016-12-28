@@ -25,21 +25,14 @@ Password:
     
 ##############################################################################
 # Configure Apache
-httpd:
-  service.running:
-    - name: apache2
-    - enable: True
-    - reload: True
-    - watch:
-      - file: httpd_config
-
-httpd_config:
+/etc/apache2/sites-enabled/nagios.conf:
   file.copy:
-    - name: /etc/apache2/sites-enabled/nagios.conf
     - source: /etc/nagios3/apache2.conf
     - require:
       - pkg: nagios-server
       - cmd: Password
+    - watch_in:
+      - pkg: httpd-service
 
 ##############################################################################
 # Copy server's config file
@@ -53,10 +46,10 @@ localhost_nagios2.cfg:
 ##############################################################################
 # Generate config files of worker hosts
 {% for worker, ip in pillar['workers'].items() %}
-config Create config {{ worker }}:
-  file.copy:
+Create config {{ worker }}:
+  file.managed:
     - name: /etc/nagios3/conf.d/{{ worker }}_nagios2.cfg
-    - source: /etc/nagios3/conf.d/localhost_nagios2.cfg
+    - source: salt://nagios/localhost_nagios2.cfg
     - require:
       - file: localhost_nagios2.cfg
     - watch_in:

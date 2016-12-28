@@ -1,7 +1,5 @@
-## Devops Homework — multi-VM AMQP 
-
+## Devops Homework — multi-VM AMQP
 ### Goal
-
  Set up environment on a Vagrant boxes with AMQP broker, message publisher, message consumer and a monitoring system. Monitor queue length with alerting enabled when length exceeds certain threshold.
 
 Provision servers with configuration management tool and automate whole setup as much as possible. All additional setup that is required on top of minimal distribution (packages, services, directories, settings) should be described as code (configuration management).
@@ -17,21 +15,27 @@ Provision servers with configuration management tool and automate whole setup as
 
 Deliverables
 
-This is Vagrant environment with to type
+This is Vagrant environment with number of boxes.  Run `vagrant up` in the root directory of the project to bring homework environment up. This command starts two boxes. First one is CENTRAL box with RabbitMQ server, queue filler and Ganglia monitoring system. The second is WORKER_0 box with queue reader. 
 
-Run 'vagrant up' in the root directory of the project to bring homework environment up. This command starts two boxes. First one is CENTRAL box with RabbitMQ server, queue filler and Ganglia monitoring system. The second is WORKER_0 box with queue reader. 
+You can start any additional workers you like with `vagrant up WORKER_<N>` command, where <N> is box number. Vagrantfile file contains `WORKERS_MAX_NUM` configurable parameter to make a number of worker's box templates.
 
-You can start any additional workers you like with 'vagrant up WORKER_<N>' command, where <N> is box number. Vagrantfile file contains WORKERS_MAX_NUM configurable parameter to make a number of worker's box templates.
+Script `/var/lib/rabbitmq/publisher.sh` that fills the queueu started automaticly on CENTRAL machine, log file is `/var/lib/rabbitmq/publisher.log`.
 
-Use http://localhost:8888/ganglia/ to access monitoring system. Neither username nor password are required.
+Use [http://localhost:8888/ganglia/](http://localhost:8888/ganglia/) to access Ganglia monitoring system. Neither username nor password are required. Workers cluster consists of WORKERS nodes, Central cluster contains only one CENTRAL node. There is the mq_length metric for CENTRAL node, for example [http://localhost:8888/ganglia/graph.php?c=Central&h=central&v=0&m=mq_length&z=large](http://localhost:8888/ganglia/graph.php?c=Central&h=central&v=0&m=mq_length&z=large).
 
-1. Plain text file with short and sane instructions of:
-a) how to run stress test
-b) how to access monitoring system - url, credentials, etc
-2. Vagrant project:
-a) should contain a working configuration, so that a simple "vagrant up" can be used to set up the project
-b) should contain all configuration management code that is required to set up environment
-c) should contain all the necessary extra files (if any)
+Unfortunatly there is no alerts in Ganglia web frontend. Zabbix installation is to complicated for me, and I don't like to use salt-formulas from Internet in homework, for this mattes. So I configure Nagios for alerts. Use [http://localhost:8888/](http://localhost:8888/ganglia/) with `nagioasadmin` as login name and `q1` as password.
+
+Monitoring systems use script `/var/lib/rabbitmq/check_mq` to monitor queue length. The script can be used two ways:
+* Started from command line it prints queue length and returns state like Nagios plugin. 
+* It contains metric_init() that returns the mq_length metric descriptor as Ganglia python monitor. 
+
+* Plain text file with short and sane instructions of:
+1. a) how to run stress test
+2. b) how to access monitoring system - url, credentials, etc
+3. Vagrant project:
+4. a) should contain a working configuration, so that a simple "vagrant up" can be used to set up the project
+5. b) should contain all configuration management code that is required to set up environment
+6. c) should contain all the necessary extra files (if any)
 
 Technical requirements
 
@@ -51,6 +55,7 @@ What gets evaluated
 3. Clarity of documentation and how easy it is to set up the project
 
 4. Usage of configuration management tool
+
 5. Monitoring system reactions to stress test runs
 6. Ability to add workers by simply spinning extra machine
 

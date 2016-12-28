@@ -47,12 +47,12 @@ if __name__ == '__main__':
     if len is None:
         sys.exit(3)
     if len >= THRESHOLD * 2:
-        print "CRITICAL - ", len, "messages in", QUEUE_NAME
+        print "CRITICAL -", len, "messages in", QUEUE_NAME
         sys.exit(2)
     elif len >= THRESHOLD:
-        print "WARNING - ", len, "messages in", QUEUE_NAME
+        print "WARNING -", len, "messages in", QUEUE_NAME
         sys.exit(1)
     else:
-        print "OK - ", len, "messages in", QUEUE_NAME
-        sys.exit(1)
+        print "OK -", len, "messages in", QUEUE_NAME
+        sys.exit(0)
 
