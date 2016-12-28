@@ -1,7 +1,11 @@
+##############################################################################
+# Install required packages 
 ganglia-node:
   pkg.installed:
     - name: ganglia-monitor
       
+##############################################################################
+# Configure Ganglia monitor
 ganglia-monitor:
   service.running:
     - reload: True

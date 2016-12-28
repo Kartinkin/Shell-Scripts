@@ -1,4 +1,4 @@
-# We got some pillars from vagrant. There are:
+# We got some pillars from Vagrant. There are:
 #  mq-server:
 #    hostname:       hostname of mq-server
 #    ip:             ip of mq-server
@@ -6,7 +6,6 @@
 #  workers:
 #    <workername>:   ip of worker-0
 #    <workername-1>: ip of worker-1
-
 
 base:
   '*':

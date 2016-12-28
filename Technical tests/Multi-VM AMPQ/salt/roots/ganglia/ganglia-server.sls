@@ -1,3 +1,4 @@
+##############################################################################
 # Install required packages 
 ganglia-server:
   pkg.installed:
@@ -7,6 +8,7 @@ ganglia-server:
       - rrdtool
       - ganglia-webfrontend
 
+##############################################################################
 # Configure Apache
 apache2:
   service.running:
@@ -22,6 +24,7 @@ httpd_config:
     - require:
       - pkg: ganglia-server
  
+##############################################################################
 # Configure Ganglia MetaData daemon with to clusters:
 #   first for mqserver
 #   second for workers
@@ -60,6 +63,7 @@ Add data sources:
     - require:
       - pkg: ganglia-server
 
+##############################################################################
 # Configure Ganglia monitor
 ganglia-monitor:
   service.running:
@@ -113,6 +117,7 @@ Set udp_send_channel:
     - require:
       - pkg: ganglia-server
 
+##############################################################################
 # Configure gmont to monitor message queue
 modpython config:
   file.managed:
@@ -143,6 +148,7 @@ monrabbit config:
     - require:
        - pkg: ganglia-server
 
+##############################################################################
 #Set mq_report:
 #  file.blockreplace:
 #    - name: /usr/share/ganglia-webfrontend/templates/default/cluster_view.tpl 

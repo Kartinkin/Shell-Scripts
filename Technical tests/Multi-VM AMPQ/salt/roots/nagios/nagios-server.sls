@@ -1,3 +1,5 @@
+##############################################################################
+# Install required packages 
 nagios-server:
   pkg.installed:
     - pkgs:
@@ -12,6 +14,8 @@ nagios-service:
     - watch:
       - pkg: nagios-server
      
+##############################################################################
+# Set nagioasadmin's password to 'q1' 
 Password:
   cmd.run:
     - name: htpasswd -cb /etc/nagios3/htpasswd.users nagiosadmin q1 >/dev/null 2>&1
@@ -19,6 +23,7 @@ Password:
     - watch_in:
       - service: nagios-service
     
+##############################################################################
 # Configure Apache
 httpd:
   service.running:
@@ -36,6 +41,8 @@ httpd_config:
       - pkg: nagios-server
       - cmd: Password
 
+##############################################################################
+# Copy server's config file
 localhost_nagios2.cfg:
   file.managed:
     - name: /etc/nagios3/conf.d/localhost_nagios2.cfg
@@ -43,8 +50,10 @@ localhost_nagios2.cfg:
     - watch_in:
       - service: nagios-service
  
+##############################################################################
+# Generate config files of worker hosts
 {% for worker, ip in pillar['workers'].items() %}
-Create config {{ worker }}:
+config Create config {{ worker }}:
   file.copy:
     - name: /etc/nagios3/conf.d/{{ worker }}_nagios2.cfg
     - source: /etc/nagios3/conf.d/localhost_nagios2.cfg
@@ -79,6 +88,8 @@ Add services to {{ worker }}:
       - service: nagios-service
 {% endfor %}
 
+##############################################################################
+# Add service check_mq for mq-server
 check_mq:
   file.symlink:
     - name: /usr/lib/nagios/plugins/check_mq
