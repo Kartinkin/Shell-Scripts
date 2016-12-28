@@ -1,4 +1,4 @@
-nagios-minion:
+nagios-host:
   pkg.installed:
     - name: nagios-nrpe-server
       

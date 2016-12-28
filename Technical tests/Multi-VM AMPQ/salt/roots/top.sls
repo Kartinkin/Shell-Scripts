@@ -7,9 +7,9 @@ base:
     - rabbitmq
     - publisher
 #    - ganglia.ganglia-server
-    - nagios-server
+    - nagios.nagios-server
          
   '{{ pillar['workername'] }}*':
     - worker
 #    - ganglia.ganglia-node
-    - nagios-monion
+    - nagios.nagios-minion

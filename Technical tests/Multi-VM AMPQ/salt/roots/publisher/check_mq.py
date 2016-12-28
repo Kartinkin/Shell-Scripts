@@ -1,8 +1,10 @@
 #!/usr/bin/python
 import pika
+import sys
 
 QUEUE_NAME = "technical_test"
 MQ_SERVER = "mq-server"
+THRESHOLD = 6
 
 def metric_handler(name):
     """Return a value for the requested metric"""
@@ -30,6 +32,16 @@ def metric_cleanup():
 
 # the following code is for debugging and testing
 if __name__ == '__main__':
-    descriptors = metric_init({})
-    for d in descriptors:
-        print (('%s = %s') % (d['name'], d['format'])) % (d['call_back'](d['name']))
+    len = metric_handler("")
+    if len is None:
+        sys.exit(3)
+    if len >= THRESHOLD * 2:
+        print "CRITICAL - ", len, "messages in ", QUEUE_NAME, "."
+        sys.exit(2)
+    elif len >= THRESHOLD:
+        print "WARNING - ", len, "messages in ", QUEUE_NAME, "."
+        sys.exit(1)
+    else:
+        print "WARNING - ", len, "messages in ", QUEUE_NAME, "."
+        sys.exit(1)
+

@@ -126,16 +126,11 @@ modpython config:
       - pkg: ganglia-server
  
 monrabbit:
-  file.managed:
+  file.symlink:
     - name:  /usr/lib/ganglia/python_modules/monrabbit.py
-    - source: salt://ganglia/monrabbit.py
-    - makedirs: True
-    - user: root
-    - group: root
-    - mode: 755
+    - target: {{ pillar['Publisher']['path'] }}/check_mq.py
     - require:
-      - pip: pika
-      - pkg: ganglia-server
+      - file: check_mq.py
 
 monrabbit config:
   file.managed:
