@@ -15,6 +15,7 @@ ganglia-server:
     - source: /etc/ganglia-webfrontend/apache.conf
     - require:
       - pkg: ganglia-server
+      - pkg: apache2 
     - watch_in:
       - pkg: httpd-service
 
@@ -24,92 +25,76 @@ ganglia-server:
 #   second for workers
 gmetad:
   service.running:
-    - reload: True
-    - watch:
-      - pkg: ganglia-server
-      - file: Comment default data source
-      - file: Add data sources
-
-Comment default data source:
-  file.comment:
-    - name: /etc/ganglia/gmetad.conf
-    - regex: ^data_source\s["']((?!Central).)*['"]
+#    - enable: True
     - require:
       - pkg: ganglia-server
 
-{% set server_cluster_name = pillar['Ganglia']['server_cluster']['name'] %}
-{% set server_cluster_port = pillar['Ganglia']['server_cluster']['port'] %}
-{% set worker_cluster_name = pillar['Ganglia']['worker_cluster']['name'] %}
-{% set worker_cluster_port = pillar['Ganglia']['worker_cluster']['port'] %}
-
-Add data sources:
-  file.blockreplace:
+gmetad.conf:
+  file.managed:
     - name: /etc/ganglia/gmetad.conf
-    - append_if_not_found: True
-    - marker_start: "# -START- Salt.ganglia.ganglia-server.sls" 
-    # I didn't find lambda...
-    {% set workers = pillar.get('workers', {}).keys() %}
-    {% set port = ":" + worker_cluster_port.__str__() + " " %}
-    - content: |
-        data_source "{{ server_cluster_name }}" 30 localhost:{{ server_cluster_port }}
-        data_source "{{ worker_cluster_name }}" {{ port.join(workers) }}{{ port }}
-    - marker_end: "# --END-- Salt.ganglia.ganglia-server.sls" 
+    - source: salt://ganglia/gmetad.conf
+    - template: jinja
+    - user: root
+    - group: root
+    - mode: 644
     - require:
       - pkg: ganglia-server
+    - watch_in:
+      - service: gmetad
+
+#Comment default data source:
+#  file.comment:
+#    - name: /etc/ganglia/gmetad.conf
+#    - regex: ^data_source\s["']((?!Central).)*['"]
+#    - require:
+#      - pkg: ganglia-server
+#
+#{% set server_cluster_name = pillar['Ganglia']['server_cluster']['name'] %}
+#{% set server_cluster_port = pillar['Ganglia']['server_cluster']['port'] %}
+#{% set worker_cluster_name = pillar['Ganglia']['worker_cluster']['name'] %}
+#{% set worker_cluster_port = pillar['Ganglia']['worker_cluster']['port'] %}
+#
+#Add data sources:
+#  file.blockreplace:
+#    - name: /etc/ganglia/gmetad.conf
+#    - append_if_not_found: True
+#    - marker_start: "# -START- Salt.ganglia.ganglia-server.sls"
+#
+#    # I didn't find lambda...
+#    {% set workers = pillar.get('workers', {}).keys() %}
+#    {% set port = ":" + worker_cluster_port.__str__() + " " %}
+#
+#    - content: |
+#        data_source "{{ server_cluster_name }}" 30 localhost:{{ server_cluster_port }}
+#        data_source "{{ worker_cluster_name }}" {{ port.join(workers) }}{{ port }}
+#    - marker_end: "# --END-- Salt.ganglia.ganglia-server.sls" 
+#    - require:
+#      - pkg: ganglia-server
 
 ##############################################################################
 # Configure Ganglia monitor
 ganglia-monitor:
   service.running:
-    - reload: True
-    - watch:
-      - pkg: ganglia-server
-      - file: Add node to cluster
-      - file: Set udp_recv_channel
-      - file: Set tcp_accept_channel
-      - file: Set udp_send_channel
-      - file: modpython config
-      - file: monrabbit
-      - file: monrabbit config
-
-Add node to cluster:    
-  file.blockreplace:
-    - name: /etc/ganglia/gmond.conf
-    - marker_start: "cluster {"
-    - marker_end: owner = "unspecified"
-    - content: '  name = "{{ server_cluster_name }}"'
+#    - enable: True
     - require:
       - pkg: ganglia-server
 
-Set udp_recv_channel: 
-  file.blockreplace:
+gmond.conf:
+  file.managed:
     - name: /etc/ganglia/gmond.conf
-    - marker_start: "udp_recv_channel {" 
-    - marker_end: "}"
-    - content: "  port = {{ server_cluster_port }}"
+    - source: salt://ganglia/gmond.conf
+    - template: jinja
+    - user: root
+    - group: root
+    - mode: 644
+    - context:
+      cluster: {{ pillar['Ganglia']['server_cluster']['name'] }}
+      port:    {{ pillar['Ganglia']['server_cluster']['port'] }}
+      node:    false
     - require:
       - pkg: ganglia-server
-
-Set tcp_accept_channel:
-  file.blockreplace:
-    - name: /etc/ganglia/gmond.conf
-    - marker_start: "tcp_accept_channel {"
-    - marker_end: "}"
-    - content: "  port = {{ server_cluster_port }}"
-    - require:
-      - pkg: ganglia-server
-
-Set udp_send_channel:
-  file.blockreplace:
-    - name: /etc/ganglia/gmond.conf
-    - marker_start: "udp_send_channel {"
-    - content: |
-        host = localhost
-        port = {{ server_cluster_port }}
-        ttl = 1
-    - marker_end: "}"
-    - require:
-      - pkg: ganglia-server
+    - watch_in:
+      - service: ganglia-monitor
 
 ##############################################################################
 # Configure gmont to monitor message queue
@@ -123,6 +108,9 @@ modpython config:
     - mode: 644
     - require:
       - pkg: ganglia-server
+      - file: monrabbit
+    - watch_in:
+      - service: ganglia-monitor
  
 monrabbit:
   file.symlink:
@@ -131,6 +119,9 @@ monrabbit:
     - makedirs: True
     - require:
       - file: check_mq.py
+      - pkg: ganglia-server
+    - watch_in:
+      - service: ganglia-monitor
 
 monrabbit config:
   file.managed:
@@ -141,8 +132,25 @@ monrabbit config:
     - group: root
     - mode: 644
     - require:
-       - pkg: ganglia-server
+      - pkg: ganglia-server
+      - file: monrabbit
+    - watch_in:
+      - service: ganglia-monitor
 
+##############################################################################
+# Add mq_report
+mq_report.php:
+  file.managed:
+    - name: /usr/share/ganglia-webfrontend/graph.d/mq_report.php
+    - source: salt://ganglia/mq_report.php
+    - user: root
+    - group: root
+    - mode: 644
+    - require:
+       - pkg: ganglia-server
+    - watch_in:
+       - service: gmetad
+  
 ##############################################################################
 #Set mq_report:
 #  file.blockreplace:
@@ -157,12 +165,3 @@ monrabbit config:
 #    - require:
 #       - pkg: ganglia-server
 
-mq_report.php:
-  file.managed:
-    - name: /usr/share/ganglia-webfrontend/graph.d/mq_report.php
-    - source: salt://ganglia/mq_report.php
-    - user: root
-    - group: root
-    - mode: 644
-    - require:
-       - pkg: ganglia-server

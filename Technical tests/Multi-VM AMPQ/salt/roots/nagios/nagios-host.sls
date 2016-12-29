@@ -5,4 +5,5 @@ nagios-host:
   file.append:
     - name: /etc/nagios/nrpe.cfg
     - text: server_address={{ pillar['mq-server']['hostname'] }}
-    
+
+#  service.enabled:

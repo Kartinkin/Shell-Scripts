@@ -3,11 +3,10 @@ rabbitmq-server:
     - name: rabbitmq-server
 
   service.running:
-#    - enable: True
-    - reload: True
-    - watch:
-      - pkg: rabbitmq-server
+    - enable: True
     - require:
+      - pkg: rabbitmq-server
+    - watch:
       - file: /etc/rabbitmq/rabbitmq.config
     
   file.append:
